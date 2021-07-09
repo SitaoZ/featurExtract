@@ -1,0 +1,3 @@
+[console_scripts]
+featurExtract = featurExtract.command_line:main
+
