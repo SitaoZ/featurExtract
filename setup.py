@@ -8,7 +8,7 @@ def readme():
 from setuptools import setup 
 setup(
     name='featurExtract',
-    version='0.1.1',
+    version='0.1.5',
     keywords='feature',
     description='Extract genome ferature sequence for biologists',
     long_description_content_type='text/markdown',

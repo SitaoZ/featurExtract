@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: featurExtract
-Version: 0.1.1
+Version: 0.1.5
 Summary: Extract genome ferature sequence for biologists
 Home-page: https://github.com/SitaoZ/featurExtract.git
 Author: zhusitao
@@ -37,13 +37,19 @@ CDS subcomand is used for extracting coding sequence.
     featurExtract -h 
     featurExtract create -h 
     featurExtract promoter -h 
+    featurExtract UTR -h 
+    featurExtract uORF -h 
+    featurExtract CDS -h 
     ```
 
     ```bash
     # step 1 
     featurExtract create -g ath.gff3 
-    # step 2
+    # step 2 command promoter
     featurExtract promoter -l 200 -u 100 -f ath.fa -o promoter.csv
+    featurExtract UTR  -o UTR.csv
+    featurExtract uORF -o uORF.csv
+    featurExtract CDS  -o CDS.csv
     ```
     
 

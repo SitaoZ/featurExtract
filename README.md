@@ -28,15 +28,20 @@ CDS subcomand is used for extracting coding sequence.
     featurExtract UTR -h 
     featurExtract uORF -h 
     featurExtract CDS -h 
+    featurExtract dORF -h
+    featurExtract exon -h
+    featurExtract intron -h
     ```
 
     ```bash
     # step 1 
     featurExtract create -g ath.gff3 
-    # step 2 command promoter
+    # step 2 command
     featurExtract promoter -l 200 -u 100 -f ath.fa -o promoter.csv
     featurExtract UTR  -o UTR.csv
     featurExtract uORF -o uORF.csv
     featurExtract CDS  -o CDS.csv
+    featurExtract exon -f ath.fa -t AT1G01010.1 -p 
+    featurExtract intron -f ath.fa -t AT1G01010.1 -p  
     ```
     
