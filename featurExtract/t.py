@@ -1,7 +1,9 @@
+import sys
 import gffutils
 import pandas as pd
 from Bio.Seq import Seq
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 from extract_uORF import uorf 
 
 def genome_dict(genome_fasta_path):
@@ -87,5 +89,35 @@ def uORF(args):
         #if index == 2:
             break
         
-        
-uORF('ath.fa')
+def UTR(db, genome, transcript_id):
+    out = []
+    for t in db.features_of_type('mRNA', order_by='start'):
+        print(t.id)
+        if transcript_id in t.id:
+            seq3, seq5 = '', ''
+            # utr3
+            for c in db.children(t, featuretype='three_prime_UTR', order_by='start'):
+                s = c.sequence(genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
+                seq3 += s
+            # utr5
+            for c in db.children(t, featuretype='five_prime_UTR', order_by='start'):
+                s = c.sequence(genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
+                seq5 += s
+            seq3 = Seq(seq3)
+            seq5 = Seq(seq5)
+            if t.strand == '-':
+                seq3 = seq3.reverse_complement()
+                seq5 = seq5.reverse_complement()
+            seq3Record = SeqRecord(seq3,id=transcript_id, description='utr3 length=%d'%(len(seq3)))
+            seq5Record = SeqRecord(seq5,id=transcript_id, description='utr5 length=%d'%(len(seq5)))
+            out.append(seq3Record)
+            out.append(seq5Record)
+            print('len::',len(out))
+            if True:
+                SeqIO.write(out, sys.stdout, "fasta")
+            else:
+                SeqIO.write(out, output, "fasta")
+            break
+
+db = gffutils.FeatureDB('gff.db', keep_order=True)        
+UTR(db, 'ath.fa','AT1G01010.1')

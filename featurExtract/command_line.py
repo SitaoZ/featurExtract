@@ -9,7 +9,7 @@ def sub_usage(args):
 
 def main_usage():
     print("\n\033[1;33;40mProgram: \033[0m\033[1;35;40m featurExtract \033[1;31;40m(pipeline for genome feature extract)\033[0m")
-    print("\033[1;33;40mVersion: \033[0m\033[1;32;40m 0.1.5\033[0m")
+    print("\033[1;33;40mVersion: \033[0m\033[1;32;40m 0.1.6\033[0m")
     print("\033[1;33;40mContact: \033[0m\033[1;32;40m Sitao Zhu <zhusitao1990@163.com>\033[0m")
     print("\033[1;33;40mUsage  : \033[0m\033[1;35;40m featurExtract\033[0m \033[1;31;40m<command>\033[0m")
     print("\033[1;33;40mCommand: \033[0m")

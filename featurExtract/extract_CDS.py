@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import sys
 import pandas as pd 
+from Bio import SeqIO
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 
 
@@ -39,8 +41,10 @@ def get_cds(args, db, genome, transcript_id, output):
                     seq= seq.reverse_complement()
                 cds_seq.loc[index] = [t.id,t.chrom,t.start,t.end,t.strand,seq]
                 index += 1
+                cdsRecord = SeqRecord(seq, id=t.id, description='strand %s start %d end %d length=%d'%(t.strand, t.start, t.end, len(seq)))
                 if args.print:
-                    print(">%s %s %d %d %s\n%s"%(t.id,t.chrom,t.start,t.end,t.strand,seq))
+                    SeqIO.write([cdsRecord], sys.stdout, "fasta") 
                 else:
-                    cds_seq.to_csv(args.output, sep=',', index=False)
+                    #cds_seq.to_csv(args.output, sep=',', index=False)
+                    SeqIO.write([cdsRecord], args.output, "fasta") 
                 break 

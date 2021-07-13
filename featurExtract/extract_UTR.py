@@ -7,7 +7,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 
-def utr(db, genome, transcript_id ,output):
+def utr(args, db, genome, transcript_id ,output):
     '''
     parameters:
      db : database create by gffutils 
@@ -43,7 +43,6 @@ def utr(db, genome, transcript_id ,output):
         # return a specific transcript
         out = [] 
         for t in db.features_of_type('mRNA', order_by='start'):
-            print(t.id)
             if transcript_id in t.id:
                 seq3, seq5 = '', ''
                 # utr3
@@ -59,9 +58,12 @@ def utr(db, genome, transcript_id ,output):
                 if t.strand == '-':
                     seq3 = seq3.reverse_complement()
                     seq5 = seq5.reverse_complement()
-                seq3Record = SeqRecord(seq3,id=transcript_id, description='utr3 length=%d'%(len(seq3)))
-                seq5Record = SeqRecord(seq5,id=transcript_id, description='utr5 length=%d'%(len(seq5)))
+                seq3Record = SeqRecord(seq3,id=transcript_id, description='strand %s utr3 length=%d'%(t.strand, len(seq3)))
+                seq5Record = SeqRecord(seq5,id=transcript_id, description='strand %s utr5 length=%d'%(t.strand, len(seq5)))
                 out.append(seq3Record)
                 out.append(seq5Record)
+                if args.print:
+                    SeqIO.write(out, sys.stdout, "fasta")
+                else:
+                    SeqIO.write(out, output, "fasta")
                 break 
-        SeqIO.write(out, output, "fasta")

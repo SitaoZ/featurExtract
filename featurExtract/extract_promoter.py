@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import sys
 import pandas as pd 
+from Bio import SeqIO
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 
 
@@ -57,9 +59,17 @@ def get_promoter(args, db, genomeDict, genome, gene_id, promoter_length, utr_hea
                 p_end_in_genome = p_end
                 promoter_seq.loc[index] = [g.id,g.chrom,p_start_in_genome,p_end_in_genome,g.strand,promoter]
                 index += 1
+                promoterSeq = SeqRecord(promoter,id=gene_id, description='chrom %s strand %s promoter start %d end %d length=%d'%(g.chrom, g.strand, p_start_in_genome, p_end_in_genome, len(promoter)))
+                if args.print:
+                    SeqIO.write(promoterSeq, sys.stdout, "fasta")
+                else:
+                    SeqIO.write(promoterSeq, output, "fasta")
+
+                '''
                 if args.print:
                     print(">{} {} {} {} {}".format(g.id,g.chrom,p_start_in_genome,p_end_in_genome,g.strand))
                     print(promoter)
                 else:
                     promoter_seq.to_csv(output, sep=',', index=False)
+                '''
                 break

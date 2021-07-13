@@ -47,9 +47,9 @@ def UTR(args):
     '''
     db = gffutils.FeatureDB('gff.db', keep_order=True)
     if args.transcript:
-        utr(db, args.genome, args.transcript, args.output)
+        utr(args, db, args.genome, args.transcript, args.output)
     else:
-        utr(db, args.genome, None, args.output)
+        utr(args, db, args.genome, None, args.output)
 
 
 def uORF(args):
@@ -148,6 +148,7 @@ parser_utr.add_argument('-f', '--genome', type=str, help='genome fasta file')
 parser_utr.add_argument('-t', '--transcript', type=str, help='specific transcript id; if not given, \
                        whole transcript will return')
 parser_utr.add_argument('-o', '--output', type=str, help='output file path')
+parser_utr.add_argument('-p', '--print', action="store_true", help='boolean type, stdout')
 parser_utr.set_defaults(func=UTR)
 
 # uORF subcommand
@@ -160,6 +161,7 @@ parser_uORF.set_defaults(func=uORF)
 
 # CDS subcommand
 parser_cds = subparsers.add_parser('CDS', help='extract coding sequence in genome or gene')
+parser_cds.add_argument('-c', '--csv', action="store_true", help='output file format')
 parser_cds.add_argument('-f', '--genome', type=str, help='genome fasta')
 parser_cds.add_argument('-t', '--transcript', type=str, help='specific transcript id; if not given, \
                        whole transcript will return')
