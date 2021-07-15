@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+import gffutils
 import pandas as pd 
 from Bio.Seq import Seq
 from collections import defaultdict
@@ -47,24 +48,29 @@ def dorf(transcript_id, chrom, strand, matural_transcript, coding_sequence):
     return dORF_dict
 
 
-def get_dorf(db, genome, transcript_id, output):
+
+
+def get_dorf(args):
     '''
     parameters:
-    
+        args: parse from argparse
+    return:
+        elements write to a file or stdout 
     '''
+    db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     dORF_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Strand','CDS Interval','dORF Start','dORF End','Type','dORF Length','dORF'])
     index = 0
-    if not transcript_id:
+    if not args.transcript:
         for t in db.features_of_type('mRNA', order_by='start'):
             # primary transcript (pt) 是基因组上的转录本的序列，
             # 有的会包括intron，所以提取的序列和matural transcript 不一致
             # print(t)
-            pt = t.sequence(genome, use_strand=True)
+            pt = t.sequence(args.genome, use_strand=True)
             # matural transcript (mt)
             # exon 提取的是转录本内成熟的MRNA的序列,即外显子收尾相连的matural transcript
             mt = ''
             for e in db.children(t, featuretype='exon', order_by='start'):
-                s = e.sequence(genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
+                s = e.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
                 mt += s
             mt = Seq(mt)
             if t.strand == '-':
@@ -73,7 +79,7 @@ def get_dorf(db, genome, transcript_id, output):
             cds = ''
             for c in db.children(t, featuretype='CDS', order_by='start'):
                 #print(c)
-                s = c.sequence(genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
+                s = c.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
                 cds += s
             cds = Seq(cds)
             if t.strand == '-':
@@ -85,19 +91,19 @@ def get_dorf(db, genome, transcript_id, output):
                     #print(it)
                     dORF_seq.loc[index] = it
                     index += 1
-        dORF_seq.to_csv(output, sep=',', index=False)
+        dORF_seq.to_csv(args.output, sep=',', index=False)
     else:
         for t in db.features_of_type('mRNA', order_by='start'):
             # primary transcript (pt) 是基因组上的转录本的序列，
             # 有的会包括intron，所以提取的序列和matural transcript 不一致
             # print(t)
-            if transcript_id in t.id:
-                pt = t.sequence(genome, use_strand=True)
+            if args.transcript in t.id:
+                pt = t.sequence(args.genome, use_strand=True)
                 # matural transcript (mt)
                 # exon 提取的是转录本内成熟的MRNA的序列,即外显子收尾相连的matural transcript
                 mt = ''
                 for e in db.children(t, featuretype='exon', order_by='start'):
-                    s = e.sequence(genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
+                    s = e.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
                     mt += s
                 mt = Seq(mt)
                 if t.strand == '-':
@@ -106,7 +112,7 @@ def get_dorf(db, genome, transcript_id, output):
                 cds = ''
                 for c in db.children(t, featuretype='CDS', order_by='start'):
                     #print(c)
-                    s = c.sequence(genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
+                    s = c.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
                     cds += s
                 cds = Seq(cds)
                 if t.strand == '-':
@@ -118,5 +124,5 @@ def get_dorf(db, genome, transcript_id, output):
                         #print(it)
                         dORF_seq.loc[index] = it
                         index += 1
-                dORF_seq.to_csv(output, sep=',', index=False)
+                dORF_seq.to_csv(args.output, sep=',', index=False)
                 break 

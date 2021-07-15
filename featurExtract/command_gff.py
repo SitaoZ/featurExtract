@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+from featurExtract.version import __version__
 
 def sub_usage(args):
     if len(args) == 1:
@@ -9,11 +10,12 @@ def sub_usage(args):
 
 def main_usage():
     print("\n\033[1;33;40mProgram: \033[0m\033[1;35;40m featurExtract \033[1;31;40m(pipeline for genome feature extract)\033[0m")
-    print("\033[1;33;40mVersion: \033[0m\033[1;32;40m 0.1.6\033[0m")
+    print("\033[1;33;40mVersion: \033[0m\033[1;32;40m %s\033[0m"%(__version__))
     print("\033[1;33;40mContact: \033[0m\033[1;32;40m Sitao Zhu <zhusitao1990@163.com>\033[0m")
     print("\033[1;33;40mUsage  : \033[0m\033[1;35;40m featurExtract\033[0m \033[1;31;40m<command>\033[0m")
     print("\033[1;33;40mCommand: \033[0m")
     sub_usage(["create  ", "create database for GTF or GFF"])
+    sub_usage(["gene    ", "extract gene sequence fo genome or gene"])
     sub_usage(["promoter", "extract promoter for genome or gene"])
     sub_usage(["UTR     ", "extract UTR for genome or gene"])
     sub_usage(["uORF    ", "extract uORF for genome or gene"])
@@ -29,7 +31,7 @@ def main():
     if len(sys.argv) == 1:
         main_usage()
     elif len(sys.argv) >= 2:
-        if sys.argv[1] in ['create','promoter','UTR','uORF','CDS','dORF','exon','intron']:
+        if sys.argv[1] in ['create','gene','promoter','UTR','uORF','CDS','dORF','exon','intron']:
             # import 就执行feature_extract()
             # 安装后，系统存在featurExtract包
             from featurExtract import feature_extract

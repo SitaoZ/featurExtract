@@ -4,6 +4,7 @@ import gffutils
 import pandas as pd 
 from Bio import SeqIO
 from Bio.Seq import Seq
+from featurExtract.database import genome_dict
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 
@@ -26,26 +27,29 @@ def intron(genomeDict, chrom, transcript_id, strand, exons):
     return introns 
         
 
-def get_intron(args, db, genome, genomeDict, transcript_id ,output):
+def get_intron(args):
     '''
     parameters:
-     
+        args: parse from argparse
+    return:
+        elements write to a file or stdout
     '''
-    # header
-    intron_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','Exon'])
-    if transcript_id:
+    db = gffutils.FeatureDB(args.database, keep_order=True) # load database 
+    genomeDict = genome_dict(args.genome) # load fasta
+    intron_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','Exon']) # header 
+    if args.transcript:
         # return a specific transcript
         for t in db.features_of_type('mRNA', order_by='start'):
             introns = ''
-            if transcript_id in t.id:
+            if args.transcript in t.id:
                 exons = [] # exon position include start and end
                 for e in db.children(t, featuretype='exon', order_by='start'):
                     exons.append(e.start)
                     exons.append(e.end)
-                introns = intron(genomeDict, t.chrom, transcript_id, t.strand, exons)
+                introns = intron(genomeDict, t.chrom, args.transcript, t.strand, exons)
                 break 
         if not args.print:
-            SeqIO.write(introns, output, "fasta")
+            SeqIO.write(introns, args.output, "fasta")
         else:
             SeqIO.write(introns, sys.stdout, "fasta")
     else:

@@ -6,14 +6,19 @@ def readme():
         return f.read()
 
 from setuptools import setup 
+from featurExtract.version import __version__
+
 setup(
     name='featurExtract',
-    version='0.1.6',
-    keywords='feature',
+    version=__version__,
+    keywords='genome feature, extract',
     description='Extract genome ferature sequence for biologists',
     long_description_content_type='text/markdown',
     long_description=readme(),
-    entry_points = {'console_scripts': ['featurExtract=featurExtract.command_line:main']},
+    entry_points = {'console_scripts': [
+                       'featurExtract=featurExtract.command_gff:main',
+                       'genBankExtract=featurExtract.command_gb:main'
+                   ]},
     author='zhusitao',
     author_email='zhusitao1990@163.com',
     url='https://github.com/SitaoZ/featurExtract.git',

@@ -1,12 +1,12 @@
 Metadata-Version: 2.1
 Name: featurExtract
-Version: 0.1.6
+Version: 0.1.7
 Summary: Extract genome ferature sequence for biologists
 Home-page: https://github.com/SitaoZ/featurExtract.git
 Author: zhusitao
 Author-email: zhusitao1990@163.com
 License: MIT
-Keywords: feature
+Keywords: genome feature,extract
 Platform: UNKNOWN
 Description-Content-Type: text/markdown
 

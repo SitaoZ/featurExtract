@@ -22,7 +22,8 @@ def CDS(args):
     cds_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','CDS'])
     db = gffutils.FeatureDB('gff.db', keep_order=True)
     index = 0
-    for t in db.features_of_type('mRNA', order_by='start'):
+    for t in db.features_of_type('gene', order_by='start'):
+        '''
         seq = ''
         for c in db.children(t, featuretype='three_prime_UTR', order_by='start'):
             print(c)
@@ -37,6 +38,12 @@ def CDS(args):
         index += 1
         if index == 2:
             break
+        '''
+        print(t)
+        seq = t.sequence(args, use_strand=False)
+        print(type(seq))
+        print(t.sequence(args, use_strand=False))
+        break 
     cds_seq.to_csv('cds.csv',sep=',',index=False)
 
 
@@ -120,4 +127,5 @@ def UTR(db, genome, transcript_id):
             break
 
 db = gffutils.FeatureDB('gff.db', keep_order=True)        
-UTR(db, 'ath.fa','AT1G01010.1')
+#UTR(db, 'ath.fa','AT1G01010.1')
+CDS('ath.fa')
