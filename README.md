@@ -1,17 +1,17 @@
 # Overview
 
-The featurExtract is python package for bioinformatics. 
-The packages contains two executable command programs.
-The first executable program is featurExtract including 
-nine subroutines termed create, gene, promoter, UTR, uORF,
-CDS, dORF, exon, intron, intergenic. The create subroutine is 
-used for creating database. The promoter subroutine is used
-for extracting promoter sequence. uORF subroutine is used 
-for extracting upstream open reading frames sequence. UTR
-subroutine is used for extracting untranslated region sequence.
-CDS subroutine is used for extracting coding sequence.intergenic
-subroutine is used for extracting intergenic sequence between two
-genes. The second executable program is genBankExtract including 
+The featurExtract is python package for bioinformatics.  
+The packages contains two executable command programs.  
+The first executable program is featurExtract including  
+ten subroutines termed create, gene, promoter, UTR, uORF,  
+CDS, dORF, exon, intron, intergenic. The create subroutine is   
+used for creating database. The promoter subroutine is used  
+for extracting promoter sequence. uORF subroutine is used  
+for extracting upstream open reading frames sequence. UTR  
+subroutine is used for extracting untranslated region sequence.  
+CDS subroutine is used for extracting coding sequence.intergenic  
+subroutine is used for extracting intergenic sequence between two  
+genes. The second executable program is genBankExtract including  
 four subroutines termed gene, CDS, rRNA, tRNA.
 
 
@@ -32,15 +32,15 @@ python setup.py install
 
 #### Requirements
 
-python >= 3.7.6 [python](https://www.python.org/)
-pandas >= 1.2.4 [pandas](https://pandas.pydata.org/docs/)
-gffutils >= 0.10.1 [gffutils](https://pythonhosted.org/gffutils/)
-setuptools >= 49.2.0 [setuptools](https://pypi.org/project/setuptools/)
-biopython >= 1.78 [biopython](https://biopython.org/wiki/Documentation/)
+python >= 3.7.6 [python](https://www.python.org/)  
+pandas >= 1.2.4 [pandas](https://pandas.pydata.org/docs/)  
+gffutils >= 0.10.1 [gffutils](https://pythonhosted.org/gffutils/)  
+setuptools >= 49.2.0 [setuptools](https://pypi.org/project/setuptools/)  
+biopython >= 1.78 [biopython](https://biopython.org/wiki/Documentation/)  
 
 ### Usage
-featurExtract is designed for GFF and GTF file and 
-GenBankExtract is suited for GenBank file. 
+featurExtract is designed for GFF and GTF file  
+and GenBankExtract is suited for GenBank file. 
 
 #### featurExtract
 
