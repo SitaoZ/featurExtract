@@ -20,7 +20,7 @@ four subroutines termed gene, CDS, rRNA, tRNA.
 ### Install
 Two way offer to install featurExtract module.
 
-**install command line** <br>
+#### install command line
 
     ```bash
     pip install featurExtract
@@ -29,18 +29,20 @@ Two way offer to install featurExtract module.
     cd featurExtract; python setup.py install
     ```
 
-**Requirements** <br>
+#### Requirements
 
-    python >= 3.7.6 [python](https://www.python.org/)
-    pandas >= 1.2.4 [pandas](https://pandas.pydata.org/docs/)
-    gffutils >= 0.10.1 [gffutils](https://pythonhosted.org/gffutils/)
-    setuptools >= 49.2.0 [setuptools](https://pypi.org/project/setuptools/)
-    biopython >= 1.78 [biopython](https://biopython.org/wiki/Documentation)
+python >= 3.7.6 [python](https://www.python.org/)
+pandas >= 1.2.4 [pandas](https://pandas.pydata.org/docs/)
+gffutils >= 0.10.1 [gffutils](https://pythonhosted.org/gffutils/)
+setuptools >= 49.2.0 [setuptools](https://pypi.org/project/setuptools/)
+biopython >= 1.78 [biopython](https://biopython.org/wiki/Documentation/)
+
 ### Usage
 featurExtract is designed for GFF and GTF file and 
 GenBankExtract is suited for GenBank file. 
 
-**featurExtract** <br> 
+#### featurExtract
+
     ```bash
     # gff or gtf database 
     which featurExtract
@@ -56,7 +58,7 @@ GenBankExtract is suited for GenBank file.
     featurExtract intergenic -h
     ```
 
-**genBankExtract** <br>
+#### genBankExtract
 
     ```bash 
     # GenBank database
@@ -69,7 +71,7 @@ GenBankExtract is suited for GenBank file.
     ```
 ### Examples
 
-**featurExtract** <br>
+#### featurExtract
 
     ```bash
     # step 1 
@@ -83,7 +85,7 @@ GenBankExtract is suited for GenBank file.
     featurExtract intron -f ath.fa -t AT1G01010.1 -p  
     ```
     
-**genBankExtract** <br>
+#### genBankExtract
 
     ```bash 
     # GenBank step 3
