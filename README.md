@@ -19,6 +19,7 @@ four subroutines termed gene, CDS, rRNA, tRNA.
 
 ### Install
 Two way offer to install featurExtract module.
+
 **install command line** <br>
 
     ```bash
@@ -40,7 +41,7 @@ Two way offer to install featurExtract module.
 featurExtract is designed for GFF and GTF file and 
 GenBankExtract is suited for GenBank file. 
 
-    **featurExtract** <br> 
+**featurExtract** <br> 
     ```bash
     # gff or gtf database 
     which featurExtract
@@ -55,7 +56,9 @@ GenBankExtract is suited for GenBank file.
     featurExtract intron -h
     featurExtract intergenic -h
     ```
-    **genBankExtract** <br>
+
+**genBankExtract** <br>
+
     ```bash 
     # GenBank database
     which genBankExtract
@@ -67,7 +70,8 @@ GenBankExtract is suited for GenBank file.
     ```
 ### Examples
 
-    **featurExtract** <br>
+**featurExtract** <br>
+
     ```bash
     # step 1 
     featurExtract create -g ath.gff3 
@@ -80,7 +84,8 @@ GenBankExtract is suited for GenBank file.
     featurExtract intron -f ath.fa -t AT1G01010.1 -p  
     ```
     
-    **genBankExtract** <br>
+**genBankExtract** <br>
+
     ```bash 
     # GenBank step 3
     genBankExtract gene -g NC_000932.gb -f dna -p  
