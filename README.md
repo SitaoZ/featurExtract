@@ -30,13 +30,12 @@ Two way offer to install featurExtract module.
     ```
 
 **Requirements** <br>
-    ```
+
     python >= 3.7.6 [python](https://www.python.org/)
     pandas >= 1.2.4 [pandas](https://pandas.pydata.org/docs/)
     gffutils >= 0.10.1 [gffutils](https://pythonhosted.org/gffutils/)
     setuptools >= 49.2.0 [setuptools](https://pypi.org/project/setuptools/)
     biopython >= 1.78 [biopython](https://biopython.org/wiki/Documentation)
-    ```
 ### Usage
 featurExtract is designed for GFF and GTF file and 
 GenBankExtract is suited for GenBank file. 
