@@ -22,12 +22,13 @@ Two way offer to install featurExtract module.
 
 #### install command line
 
-    ```bash
-    pip install featurExtract
-    # other
-    git clone https://github.com/SitaoZ/featurExtract.git
-    cd featurExtract; python setup.py install
-    ```
+```bash
+pip install featurExtract
+# other
+git clone https://github.com/SitaoZ/featurExtract.git
+cd featurExtract
+python setup.py install
+```
 
 #### Requirements
 
@@ -43,55 +44,55 @@ GenBankExtract is suited for GenBank file.
 
 #### featurExtract
 
-    ```bash
-    # gff or gtf database 
-    which featurExtract
-    featurExtract -h 
-    featurExtract create -h 
-    featurExtract promoter -h 
-    featurExtract UTR -h 
-    featurExtract uORF -h 
-    featurExtract CDS -h 
-    featurExtract dORF -h
-    featurExtract exon -h
-    featurExtract intron -h
-    featurExtract intergenic -h
-    ```
+```bash
+# gff or gtf database 
+which featurExtract
+featurExtract -h 
+featurExtract create -h 
+featurExtract promoter -h 
+featurExtract UTR -h 
+featurExtract uORF -h 
+featurExtract CDS -h 
+featurExtract dORF -h
+featurExtract exon -h
+featurExtract intron -h
+featurExtract intergenic -h
+```
 
 #### genBankExtract
 
-    ```bash 
-    # GenBank database
-    which genBankExtract
-    genBankExtract -h
-    genBankExtract gene -h
-    genBankExtract CDS  -h
-    genBankExtract rRNA -h
-    genBankExtract tRNA -h
-    ```
+```bash 
+# GenBank database
+which genBankExtract
+genBankExtract -h
+genBankExtract gene -h
+genBankExtract CDS  -h
+genBankExtract rRNA -h
+genBankExtract tRNA -h
+```
 ### Examples
 
 #### featurExtract
 
-    ```bash
-    # step 1 
-    featurExtract create -g ath.gff3 
-    # step 2 command
-    featurExtract promoter -l 200 -u 100 -f ath.fa -o promoter.csv
-    featurExtract UTR  -o UTR.csv
-    featurExtract uORF -o uORF.csv
-    featurExtract CDS  -o CDS.csv
-    featurExtract exon -f ath.fa -t AT1G01010.1 -p 
-    featurExtract intron -f ath.fa -t AT1G01010.1 -p  
-    ```
+```bash
+# step 1 
+featurExtract create -g ath.gff3 
+# step 2 command
+featurExtract promoter -l 200 -u 100 -f ath.fa -o promoter.csv
+featurExtract UTR  -o UTR.csv
+featurExtract uORF -o uORF.csv
+featurExtract CDS  -o CDS.csv
+featurExtract exon -f ath.fa -t AT1G01010.1 -p 
+featurExtract intron -f ath.fa -t AT1G01010.1 -p  
+```
     
 #### genBankExtract
 
-    ```bash 
-    # GenBank step 3
-    genBankExtract gene -g NC_000932.gb -f dna -p  
-    genBankExtract CDS  -g NC_000932.gb -f dna -p 
-    genBankExtract rRNA -g NC_000932.gb -f dna -p
-    genBankExtract tRNA -g NC_000932.gb -f dna -p
-    ```
+```bash 
+# GenBank step 3
+genBankExtract gene -g NC_000932.gb -f dna -p  
+genBankExtract CDS  -g NC_000932.gb -f dna -p 
+genBankExtract rRNA -g NC_000932.gb -f dna -p
+genBankExtract tRNA -g NC_000932.gb -f dna -p
+```
     
