@@ -1,17 +1,25 @@
 # Overview
 
 The featurExtract is python package for bioinformatics. 
-The packages contains five subcommands.
-The create subcommand is used for creating database.
-promoter subcomand is used for extracting promoter sequence.
-uORF subcomand is used for extracting upstream open reading frames sequence.
-UTR subcomand is used for extracting untranslated region sequence.
-CDS subcomand is used for extracting coding sequence.
+The packages contains two executable command programs.
+The first executable program is featurExtract including 
+nine subroutines termed create, gene, promoter, UTR, uORF,
+CDS, dORF, exon, intron, intergenic. The create subroutine is 
+used for creating database. The promoter subroutine is used
+for extracting promoter sequence. uORF subroutine is used 
+for extracting upstream open reading frames sequence. UTR
+subroutine is used for extracting untranslated region sequence.
+CDS subroutine is used for extracting coding sequence.intergenic
+subroutine is used for extracting intergenic sequence between two
+genes. The second executable program is genBankExtract including 
+four subroutines termed gene, CDS, rRNA, tRNA.
 
 
-## Brief introduction of format package
+## Brief introduction of featurExtract package
 
-1. **Install** <br>
+### Install
+    Two way offer to install featurExtract module.
+    **install command line** <br>
     ```bash
     pip install featurExtract
     # other
@@ -19,7 +27,10 @@ CDS subcomand is used for extracting coding sequence.
     cd featurExtract; python setup.py install
     ```
 
-2. **Usage** <br>
+### Usage
+    featurExtract is designed for GFF and GTF file and 
+    GenBankExtract is suited for GenBank file. 
+    **featurExtract** <br> 
     ```bash
     # gff or gtf database 
     which featurExtract
@@ -32,7 +43,10 @@ CDS subcomand is used for extracting coding sequence.
     featurExtract dORF -h
     featurExtract exon -h
     featurExtract intron -h
-    
+    featurExtract intergenic -h
+    ```
+    **genBankExtract** <br>
+    ```bash 
     # GenBank database
     which genBankExtract
     genBankExtract -h
@@ -41,7 +55,9 @@ CDS subcomand is used for extracting coding sequence.
     genBankExtract rRNA -h
     genBankExtract tRNA -h
     ```
+### Examples
 
+    **featurExtract** <br>
     ```bash
     # step 1 
     featurExtract create -g ath.gff3 
@@ -52,6 +68,10 @@ CDS subcomand is used for extracting coding sequence.
     featurExtract CDS  -o CDS.csv
     featurExtract exon -f ath.fa -t AT1G01010.1 -p 
     featurExtract intron -f ath.fa -t AT1G01010.1 -p  
+    ```
+    
+    **genBankExtract** <br>
+    ```bash 
     # GenBank step 3
     genBankExtract gene -g NC_000932.gb -f dna -p  
     genBankExtract CDS  -g NC_000932.gb -f dna -p 
