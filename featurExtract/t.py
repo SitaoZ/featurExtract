@@ -23,6 +23,7 @@ def CDS(args):
     db = gffutils.FeatureDB('gff.db', keep_order=True)
     index = 0
     for t in db.features_of_type('gene', order_by='start'):
+        print(t)
         '''
         seq = ''
         for c in db.children(t, featuretype='three_prime_UTR', order_by='start'):
@@ -39,7 +40,7 @@ def CDS(args):
         if index == 2:
             break
         '''
-        print(t)
+        print(t.start)
         seq = t.sequence(args, use_strand=False)
         print(type(seq))
         print(t.sequence(args, use_strand=False))
