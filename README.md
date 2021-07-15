@@ -18,22 +18,17 @@ four subroutines termed gene, CDS, rRNA, tRNA.
 ## Brief introduction of featurExtract package
 
 ### Install
-    Two way offer to install featurExtract module.
-    **install command line** <br>
+Two way offer to install featurExtract module.
+**install command line** <br>
+
     ```bash
     pip install featurExtract
     # other
     git clone https://github.com/SitaoZ/featurExtract.git
     cd featurExtract; python setup.py install
     ```
-python>=3.7.6',
-                        'argparse>=1.1', 
-                        'pandas>=1.2.4', 
-                        'gffutils>=0.10.1',
-                        'setuptools>=49.2.0',
-                        'biopython>=1.78']
 
-    **Requirements** <br>
+**Requirements** <br>
     ```
     python >= 3.7.6 [python](https://www.python.org/)
     pandas >= 1.2.4 [pandas](https://pandas.pydata.org/docs/)
@@ -42,8 +37,9 @@ python>=3.7.6',
     biopython >= 1.78 [biopython](https://biopython.org/wiki/Documentation)
     ```
 ### Usage
-    featurExtract is designed for GFF and GTF file and 
-    GenBankExtract is suited for GenBank file. 
+featurExtract is designed for GFF and GTF file and 
+GenBankExtract is suited for GenBank file. 
+
     **featurExtract** <br> 
     ```bash
     # gff or gtf database 
