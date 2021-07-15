@@ -8,6 +8,9 @@ def readme():
 from setuptools import setup 
 from featurExtract.version import __version__
 
+PACKAGES = [
+    "featurExtract"
+]
 setup(
     name='featurExtract',
     version=__version__,
@@ -22,11 +25,12 @@ setup(
     author='zhusitao',
     author_email='zhusitao1990@163.com',
     url='https://github.com/SitaoZ/featurExtract.git',
-    include_package_data=True,
-    packages=['featurExtract'],
+    include_package_data=True, # done via MANIFEST.in under setuptools
+    packages=PACKAGES,
     license='MIT',
     install_requires = ['argparse>=1.1', 
                         'pandas>=1.2.4', 
                         'gffutils>=0.10.1',
                         'setuptools>=49.2.0',
-                        'biopython>=1.78'])
+                        'biopython>=1.78'],
+    python_requires=">=3.7.6")
