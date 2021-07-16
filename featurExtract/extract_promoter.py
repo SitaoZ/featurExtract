@@ -61,7 +61,9 @@ def get_promoter(args):
                 p_end_in_genome = p_end
                 promoter_seq.loc[index] = [g.id,g.chrom,p_start_in_genome,p_end_in_genome,g.strand,promoter]
                 index += 1
-                promoterSeq = SeqRecord(promoter,id=args.gene, description='chrom %s strand %s promoter start %d end %d length=%d'%(g.chrom, g.strand, p_start_in_genome, p_end_in_genome, len(promoter)))
+                promoterSeq = SeqRecord(promoter,id=args.gene, 
+                              description='chrom %s strand %s promoter start %d end %d length=%d'%(
+                              g.chrom, g.strand, p_start_in_genome, p_end_in_genome, len(promoter)))
                 if args.print:
                     SeqIO.write(promoterSeq, sys.stdout, "fasta")
                 else:

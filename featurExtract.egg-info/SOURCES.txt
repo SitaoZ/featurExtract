@@ -20,6 +20,7 @@ featurExtract/feature_extract.py
 featurExtract/genBank_extract.py
 featurExtract/parameter.py
 featurExtract/t.py
+featurExtract/util.py
 featurExtract/version.py
 featurExtract.egg-info/PKG-INFO
 featurExtract.egg-info/SOURCES.txt

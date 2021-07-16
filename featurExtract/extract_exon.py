@@ -6,6 +6,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
+from featurExtract.util import utr3_type, utr5_type, mRNA_type
 
 
 def get_exon(args):
@@ -15,10 +16,11 @@ def get_exon(args):
     '''
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     exon_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','Exon']) # header
+    mRNA_str = mRNA_type(args.style)
     if args.transcript:
         # return a specific transcript
         out = [] 
-        for t in db.features_of_type('mRNA', order_by='start'):
+        for t in db.features_of_type(mRNA_str, order_by='start'):
             if args.transcript in t.id:
                 # exon
                 exon_index = 1
@@ -27,7 +29,9 @@ def get_exon(args):
                     exon = Seq(exon)
                     if t.strand == '-':
                         exon = exon.reverse_complement()
-                    exonRecord = SeqRecord(exon,id=args.transcript, description='strand %s exon %d start %d end %d length=%d'%(t.strand, exon_index, e.start, e.end, len(exon)))
+                    exonRecord = SeqRecord(exon,id=args.transcript, 
+                                 description='strand %s exon %d start %d end %d length=%d'%(t.strand, 
+                                             exon_index, e.start, e.end, len(exon)))
                     out.append(exonRecord)
                     exon_index += 1
                 break 

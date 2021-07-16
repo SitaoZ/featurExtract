@@ -35,7 +35,10 @@ def get_gene(args):
                 seq = Seq(seq)
                 if g.strand == '-':
                     seq = seq.reverse_complement()
-                geneRecord = SeqRecord(seq, id=g.id, description='strand %s start %d end %d length=%d'%(g.strand, g.start, g.end, len(seq)))
+                geneRecord = SeqRecord(seq, id=g.id, 
+                             description='strand %s start %d end %d length=%d'%(
+                                          g.strand, g.start, g.end, len(seq))
+                                      )
                 if args.print:
                     SeqIO.write([geneRecord], sys.stdout, "fasta") 
                 else:
@@ -59,7 +62,10 @@ def get_gene_gb(args):
                 # part.strand 会将FeatureLocation -1的反向互补
                 # 判断提取的和已知的是否一致
                 gene_id = feature.qualifiers['gene'][0] if 'gene' in feature.qualifiers else 'Null'
-                gene_seq_record = SeqRecord(gene_seq, id='gene:%s'%(gene_id), description='strand %s length %d'%(feature.strand, len(gene_seq)))
+                gene_seq_record = SeqRecord(gene_seq, id='gene:%s'%(gene_id), 
+                                            description='strand %s length %d'%(
+                                            feature.strand, len(gene_seq))
+                                           )
                 gene.append(gene_seq_record)
     if args.print and args.format == 'dna':
         SeqIO.write(gene, sys.stdout, 'fasta')

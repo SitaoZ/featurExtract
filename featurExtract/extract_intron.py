@@ -7,6 +7,7 @@ from Bio.Seq import Seq
 from featurExtract.database import genome_dict
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
+from featurExtract.util import utr3_type, utr5_type, mRNA_type
 
 def intron(genomeDict, chrom, transcript_id, strand, exons):
     '''
@@ -36,10 +37,11 @@ def get_intron(args):
     '''
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database 
     genomeDict = genome_dict(args.genome) # load fasta
+    mRNA_str = mRNA_type(args.style)
     intron_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','Exon']) # header 
     if args.transcript:
         # return a specific transcript
-        for t in db.features_of_type('mRNA', order_by='start'):
+        for t in db.features_of_type(mRNA_str, order_by='start'):
             introns = ''
             if args.transcript in t.id:
                 exons = [] # exon position include start and end

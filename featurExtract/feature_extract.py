@@ -23,8 +23,9 @@ def create(args):
     parameters:
      args: arguments from argparse
     '''
-    fn = args.gff
-    db = gffutils.create_db(fn, dbfn='gff.db', force=True, keep_order=True,\
+    fn = args.genomefeature
+    database_id = args.output_prefix +'.'+ args.file_type
+    db = gffutils.create_db(fn, dbfn=database_id, force=True, keep_order=True,\
         disable_infer_genes=True, disable_infer_transcripts=True,\
         merge_strategy='merge', sort_attribute_values=True)
     return db
@@ -71,7 +72,7 @@ def dORF(args):
     parameters:
      args: arugmensts from argparse
     '''
-    get_dorf(db)
+    get_dorf(args)
 
 
 def exon(args):
@@ -114,8 +115,9 @@ parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(help='sub-command help')
 # create subcommand 
 parser_create = subparsers.add_parser('create', help='create annotation database')
-parser_create.add_argument('-g', '--gff', type=str, help='genome annotation file')
-parser_create.add_argument('-o', '--output', type=str, help='gff database absolute path')
+parser_create.add_argument('-f', '--file_type', choices=['GFF','GTF'], help='genome annotation file')
+parser_create.add_argument('-g', '--genomefeature', type=str, help='genome annotation file')
+parser_create.add_argument('-o', '--output_prefix', type=str, help='database absolute path')
 parser_create.set_defaults(func=create)
 
 # promoter subcommand
@@ -127,6 +129,7 @@ parser_promoter.add_argument('-u', '--utr5_upper_length', type=int, help='utr5 l
 parser_promoter.add_argument('-f', '--genome', type=str, help='genome fasta')
 parser_promoter.add_argument('-o', '--output', type=str, help = 'output csv file path')
 parser_promoter.add_argument('-p', '--print', action="store_true", help='boolean type, stdin')
+parser_promoter.add_argument('-s', '--style', choices=['GFF','GTF'], help = 'GTF database or GFF database')
 parser_promoter.set_defaults(func=promoter)
 
 # gene subcommand 
@@ -136,6 +139,7 @@ parser_gene.add_argument('-g', '--gene', type=str, help='specific gene; if not g
 parser_gene.add_argument('-f', '--genome', type=str, help='genome fasta')
 parser_gene.add_argument('-o', '--output', type=str, help = 'output csv file path')
 parser_gene.add_argument('-p', '--print', action="store_true", help='boolean type, stdin')
+parser_gene.add_argument('-s', '--style', choices=['GFF','GTF'], help = 'GTF database or GFF database')
 parser_gene.set_defaults(func=gene)
 
 # intergenic subcommand 
@@ -145,6 +149,7 @@ parser_intergenic.add_argument('-f', '--genome', type=str, help='genome fasta')
 parser_intergenic.add_argument('-l', '--intergene_length', type=int, help='intergenic length')
 parser_intergenic.add_argument('-o', '--output', type=str, help = 'output csv file path')
 parser_intergenic.add_argument('-p', '--print', action="store_true", help='boolean type, stdin')
+parser_intergenic.add_argument('-s', '--style', choices=['GFF','GTF'], help = 'GTF database or GFF database')
 parser_intergenic.set_defaults(func=intergenic)
 
 # UTR subcommand
@@ -155,6 +160,7 @@ parser_utr.add_argument('-t', '--transcript', type=str, help='specific transcrip
                        whole transcript will return')
 parser_utr.add_argument('-o', '--output', type=str, help='output file path')
 parser_utr.add_argument('-p', '--print', action="store_true", help='boolean type, stdout')
+parser_utr.add_argument('-s', '--style', choices=['GFF','GTF'], help = 'GTF database or GFF database')
 parser_utr.set_defaults(func=UTR)
 
 # uORF subcommand
@@ -164,6 +170,7 @@ parser_uORF.add_argument('-f', '--genome', type=str, help='genome fasta')
 parser_uORF.add_argument('-t', '--transcript', type=str, help='specific transcript id; if not given, \
                        whole transcript will return')
 parser_uORF.add_argument('-o', '--output', type=str, help='output file path')
+parser_uORF.add_argument('-s', '--style', choices=['GFF','GTF'], help = 'GTF database or GFF database')
 parser_uORF.set_defaults(func=uORF)
 
 # CDS subcommand
@@ -175,6 +182,7 @@ parser_cds.add_argument('-t', '--transcript', type=str, help='specific transcrip
                        whole transcript will return')
 parser_cds.add_argument('-o', '--output', type=str, help='output file path')
 parser_cds.add_argument('-p', '--print', action="store_true", help='boolean type; stdin')
+parser_cds.add_argument('-s', '--style', choices=['GFF','GTF'], help = 'GTF database or GFF database')
 parser_cds.set_defaults(func=CDS)
 
 # dORF subcommand 
@@ -185,6 +193,7 @@ parser_dORF.add_argument('-t', '--transcript', type=str, help='specific transcri
                        whole transcript will return')
 parser_dORF.add_argument('-o', '--output', type=str, help='output file path')
 parser_dORF.add_argument('-p', '--print', action="store_true", help='stdin')
+parser_dORF.add_argument('-s', '--style', choices=['GFF','GTF'], help = 'GTF database or GFF database')
 parser_dORF.set_defaults(func=dORF)
 
 
@@ -195,6 +204,7 @@ parser_exon.add_argument('-f', '--genome', type=str, help='genome fasta')
 parser_exon.add_argument('-t', '--transcript', type=str, help='specific transcript id; needed')
 parser_exon.add_argument('-o', '--output', type=str, help='output file path')
 parser_exon.add_argument('-p', '--print', action="store_true", help='stdin')
+parser_exon.add_argument('-s', '--style', choices=['GFF','GTF'], help = 'GTF database or GFF database')
 parser_exon.set_defaults(func=exon)
 
 # intron 
@@ -204,6 +214,7 @@ parser_intron.add_argument('-f', '--genome', type=str, help='genome fasta')
 parser_intron.add_argument('-t', '--transcript', type=str, help='specific transcript id; needed')
 parser_intron.add_argument('-o', '--output', type=str, help='output file path')
 parser_intron.add_argument('-p', '--print', action="store_true", help='stdin')
+parser_intron.add_argument('-s', '--style', choices=['GFF','GTF'], help = 'GTF database or GFF database')
 parser_intron.set_defaults(func=intron)
 
 

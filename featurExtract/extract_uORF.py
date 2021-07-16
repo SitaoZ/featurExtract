@@ -4,6 +4,8 @@ import gffutils
 import pandas as pd 
 from Bio.Seq import Seq
 from collections import defaultdict
+from featurExtract.util import utr3_type, utr5_type, mRNA_type
+from featurExtract.util import stop_codon_seq, add_stop_codon
 
 # table header 
 ['TranscriptID','Chrom', 'Strand','CDS Interval','uORF Start','uORF End','uORF Type','uORF Length','uORF']
@@ -79,8 +81,9 @@ def get_uorf(args):
     
     uORF_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Strand','CDS Interval','uORF Start','uORF End','uORF Type','uORF Length','uORF'])
     index = 0
+    mRNA_str = mRNA_type(args.style) 
     if not args.transcript:
-        for t in db.features_of_type('mRNA', order_by='start'):
+        for t in db.features_of_type(mRNA_str, order_by='start'):
             # primary transcript (pt) 是基因组上的转录本的序列，
             # 有的会包括intron，所以提取的序列和matural transcript 不一致
             # print(t)
@@ -100,6 +103,9 @@ def get_uorf(args):
                 #print(c)
                 s = c.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
                 cds += s
+            if args.style == 'GTF':
+                sc_seq = stop_codon_seq(db, t, args.genome)
+                cds = add_stop_codon(cds, t.strand, sc_seq)
             cds = Seq(cds)
             if t.strand == '-':
                 cds = cds.reverse_complement()
@@ -114,7 +120,7 @@ def get_uorf(args):
             #    break
         uORF_seq.to_csv(args.output, sep=',', index=False)
     else:
-        for t in db.features_of_type('mRNA', order_by='start'):
+        for t in db.features_of_type(mRNA_str, order_by='start'):
             # primary transcript (pt) 是基因组上的转录本的序列，
             # 有的会包括intron，所以提取的序列和matural transcript 不一致
             # print(t)
@@ -135,6 +141,9 @@ def get_uorf(args):
                     #print(c)
                     s = c.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
                     cds += s
+                if args.style == 'GTF':
+                    sc_seq = stop_codon_seq(db, t, args.genome)
+                    cds = add_stop_codon(cds, t.strand, sc_seq)
                 cds = Seq(cds)
                 if t.strand == '-':
                     cds = cds.reverse_complement()

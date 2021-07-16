@@ -50,7 +50,10 @@ def get_intergenic(args):
         # 处理正链
         if this_start - last_end >= args.intergene_length:
             intergenic_seq = genomeDict[chrom][last_end:this_start]
-            intergenic_record = SeqRecord(intergenic_seq, id="%s--%s"%(last_id, this_id), description='strand %s start %d end %d length=%d'%(strand, last_end+1, this_start, len(intergenic_seq)))
+            intergenic_record = SeqRecord(intergenic_seq, 
+                                id="%s--%s"%(last_id, this_id), 
+                                description='strand %s start %d end %d length=%d'%(
+                                strand, last_end+1, this_start, len(intergenic_seq)))
             seq_out.append(intergenic_record)
     for i,pospair in enumerate(gene_minus[1:]):
         last_end = gene_minus[i][1]
@@ -64,7 +67,10 @@ def get_intergenic(args):
             intergenic_seq = genomeDict[chrom][last_end:this_start]
             if strand == '-':
                 intergenic_seq.reverse_complement()
-            intergenic_record = SeqRecord(intergenic_seq, id="%s--%s"%(last_id, this_id), description='strand %s tart %d end %d length=%d'%(strand, last_end+1, this_start, len(intergenic_seq)))
+            intergenic_record = SeqRecord(intergenic_seq, 
+                                id="%s--%s"%(last_id, this_id), 
+                                description='strand %s tart %d end %d length=%d'%(
+                                strand, last_end+1, this_start, len(intergenic_seq)))
             seq_out.append(intergenic_record)
     
     if args.print:
@@ -89,7 +95,8 @@ def get_intergenic_gb(args):
                 # part.strand 会将FeatureLocation -1的反向互补
                 # 判断提取的和已知的是否一致
                 gene_id = feature.qualifiers['gene'][0] if 'gene' in feature.qualifiers else 'Null'
-                gene_seq_record = SeqRecord(gene_seq, id='gene:%s'%(gene_id), description='strand %s length %d'%(feature.strand, len(gene_seq)))
+                gene_seq_record = SeqRecord(gene_seq, id='gene:%s'%(gene_id), 
+                                  description='strand %s length %d'%(feature.strand, len(gene_seq)))
                 gene.append(gene_seq_record)
     if args.print and args.format == 'dna':
         SeqIO.write(gene, sys.stdout, 'fasta')
