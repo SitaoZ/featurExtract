@@ -1,16 +1,3 @@
-Metadata-Version: 2.1
-Name: featurExtract
-Version: 0.2.2
-Summary: Extract genome ferature sequence for biologists
-Home-page: https://github.com/SitaoZ/featurExtract.git
-Author: zhusitao
-Author-email: zhusitao1990@163.com
-License: MIT
-Keywords: genome feature,extract
-Platform: UNKNOWN
-Requires-Python: >=3.7.6
-Description-Content-Type: text/markdown
-
 # Overview
 
 The featurExtract is python package for bioinformatics.  
@@ -109,5 +96,3 @@ genBankExtract rRNA -g NC_000932.gb -f dna -p
 genBankExtract tRNA -g NC_000932.gb -f dna -p
 ```
     
-
-

@@ -6,12 +6,14 @@ featurExtract/command_gb.py
 featurExtract/command_gff.py
 featurExtract/database.py
 featurExtract/extract_CDS.py
+featurExtract/extract_IGR.py
 featurExtract/extract_UTR.py
+featurExtract/extract_cdna.py
 featurExtract/extract_dORF.py
 featurExtract/extract_exon.py
 featurExtract/extract_gene.py
-featurExtract/extract_intergenic.py
 featurExtract/extract_intron.py
+featurExtract/extract_mRNA.py
 featurExtract/extract_promoter.py
 featurExtract/extract_rRNA.py
 featurExtract/extract_tRNA.py

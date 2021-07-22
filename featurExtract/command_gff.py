@@ -22,6 +22,7 @@ def main_usage():
     sub_usage(["gene    ", "extract gene sequence fo genome or gene"])
     sub_usage(["IGR     ", "extract intergenic region(IGR) between genes"])
     sub_usage(["intron  ", "extract intron for transcript"])
+    sub_usage(["mRNA    ", "extract mature messager RNA for transcript"])
     sub_usage(["promoter", "extract promoter for genome or gene"])
     sub_usage(["uORF    ", "extract uORF for genome or gene"])
     sub_usage(["UTR     ", "extract UTR for genome or gene"])
@@ -33,7 +34,7 @@ def main():
     if len(sys.argv) == 1:
         main_usage()
     elif len(sys.argv) >= 2:
-        if sys.argv[1] in ['create','gene','cdna','IGR','promoter','UTR','uORF','CDS','dORF','exon','intron']:
+        if sys.argv[1] in ['create','gene','mRNA','cdna','IGR','promoter','UTR','uORF','CDS','dORF','exon','intron']:
             # import 就执行feature_extract()
             # 安装后，系统存在featurExtract包
             from featurExtract import feature_extract
