@@ -71,19 +71,19 @@ def anchor_CDS(db, genome, transcript, style):
         cds_len = len(cds) + 3 # add stop codon length
         if transcript.strand == '-':
             for i in db.children(transcript, featuretype='start_codon', order_by='start'):
-                start_codon_s = i.end
-                start_codon_e = i.start
+                start_codon_s = i.end - 1
+                start_codon_e = i.start - 1
             for i in db.children(transcript, featuretype='stop_codon', order_by='start'):
-                stop_codon_s = i.end
-                stop_codon_e = i.start    
+                stop_codon_s = i.end - 1
+                stop_codon_e = i.start - 1  
         else:
             # contain + .
             for i in db.children(transcript, featuretype='start_codon', order_by='start'):
-                start_codon_s = i.start
-                start_codon_e = i.end
+                start_codon_s = i.start - 1
+                start_codon_e = i.end -1 
             for i in db.children(transcript, featuretype='stop_codon', order_by='start'):
-                stop_codon_s = i.start
-                stop_codon_e = i.end
+                stop_codon_s = i.start - 1
+                stop_codon_e = i.end -1 
          
         return start_codon_s, stop_codon_e, cds_len
     elif style == 'GFF':
@@ -98,7 +98,7 @@ def anchor_CDS(db, genome, transcript, style):
         if transcript.strand == '-':
             for i in db.children(transcript, featuretype='five_prime_UTR', order_by='start'):
                 # occasionally a transcript has more then one three_prime_UTR
-                # occasionally a transcript do not have three_prime_UTR
+                # occasionally a transcript do not have three_prime_UTR, start_codon_s = first exon
                 # the first five_prime_UTR position should be saved in minus strand
                 if i:
                     start_codon_s = i.start - 1
@@ -108,7 +108,7 @@ def anchor_CDS(db, genome, transcript, style):
                 break
             for i in db.children(transcript, featuretype='three_prime_UTR', order_by='start'):
                 # occasionally a transcript has more then one three_prime_UTR
-                # occasionally a transcript do not have three_prime_UTR
+                # occasionally a transcript do not have three_prime_UTR 
                 # the last save (position large)
                 if i:
                     stop_codon_s = i.end - 1
@@ -123,14 +123,21 @@ def anchor_CDS(db, genome, transcript, style):
             # contain + .
             for i in db.children(transcript, featuretype='five_prime_UTR', order_by='start'):
                 # occasionally a transcript has more then one three_prime_UTR
+                # occasionally a transcript do not have three_prime_UTR, start_codon_s = first exon
                 # the last five_prime_UTR position should be saved in plus strand
-                start_codon_s = i.end + 1
-                start_codon_e = i.end - 2
+                if i:
+                    start_codon_s = i.end + 1
+                    start_codon_e = i.end - 2
+                else:
+                    print('five_prime_UTR does not exist')
             for i in db.children(transcript, featuretype='three_prime_UTR', order_by='start'):
                 # occasionally a transcript has more then one three_prime_UTR
                 # the first three_prime_UTR position should be saved in plus strand
-                stop_codon_s = i.start - 2
-                stop_codon_e = i.start + 1
+                if i:
+                    stop_codon_s = i.start - 2
+                    stop_codon_e = i.start + 1
+                else:
+                    print('three_prime_UTR does not exist')
         
         return start_codon_s, stop_codon_e, cds_len
 
@@ -175,11 +182,15 @@ def get_cdna(args):
                             atg2firstexon += truncated
                 else:
                     # contain + .
-                    if start_codon_s >= e.end:
-                        atg2firstexon += len(s)
-                    elif e.end > start_codon_s > e.start:
-                        truncated = start_codon_s - e.start + 1
-                        atg2firstexon += truncated
+                    if start_codon_s == 0:
+                        # five prime_UTR not exist
+                        atg2firstexon = 0
+                    else:
+                        if start_codon_s >= e.end:
+                            atg2firstexon += len(s)
+                        elif e.end > start_codon_s > e.start:
+                            truncated = start_codon_s - e.start + 1
+                            atg2firstexon += truncated
             seq = Seq(seq)
             if t.strand == '-':
                 seq = seq.reverse_complement()
