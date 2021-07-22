@@ -6,7 +6,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
-from featurExtract.util import utr3_type, utr5_type, mRNA_type
+from featurExtract.util import mRNA_type
+from featurExtract.database import create_db
 
 
 def get_exon(args):
@@ -43,3 +44,23 @@ def get_exon(args):
         print('transcript id needed!')
         sys.exit(1)
         
+
+def get_exon_gb(args):
+    exons = []
+    for record in create_db(args.genbank):
+        index = 1
+        print(type(record))
+        for feature in record.features:
+            if feature.type == 'exon': # CDS promoter UTR 
+                exon_seq = feature.extract(record.seq)
+                # feature.strand 会将FeatureLocation -1的反向互补
+                # 判断提取的和已知的是否一致
+                exon_seq_record = SeqRecord(exon_seq,id='%s exon %d'%(record.id, index),
+                                 description='strand %s length %d'%(feature.strand, len(exon_seq)))
+                exons.append(exon_seq_record)
+                index += 1 
+    if args.print:
+        SeqIO.write(exons, sys.stdout, 'fasta')
+    elif args.output:
+        SeqIO.write(exons, args.output, 'fasta')
+ 

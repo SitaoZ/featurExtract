@@ -56,7 +56,7 @@ featurExtract CDS -h
 featurExtract dORF -h
 featurExtract exon -h
 featurExtract intron -h
-featurExtract intergenic -h
+featurExtract IGR -h
 ```
 
 #### genBankExtract

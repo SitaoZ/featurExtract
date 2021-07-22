@@ -92,22 +92,35 @@ def get_cds(args):
                 break 
 
 
+# GenBank 基因组文件，是每条染色体一个LOCUS
 
 def get_cds_gb(args):
+    '''
+    '''
     cds = []
     proteins = []
     for record in create_db(args.genbank):
         for feature in record.features:
             if feature.type == 'CDS': # CDS promoter UTR 
                 cds_seq = ''
-                for part in feature.location.parts:
-                    cds_seq += part.extract(record.seq)
+                #for part in feature.location.parts:
+                #    cds_seq += part.extract(record.seq)
+                cds_seq = feature.location.extract(record).seq
+                if len(cds_seq)%3 != 0:
+                    continue # reject not triple 
                 # part.strand 会将FeatureLocation -1的反向互补
+                # geneid or locus_tag 
+                if 'locus_tag' in feature.qualifiers:
+                    gene_id = feature.qualifiers['locus_tag'][0]
+                elif 'gene' in feature.qualifiers:
+                    gene_id = feature.qualifiers['gene'][0]
+                else:
+                    gene_id = "Null"
                 if 'transl_table' in feature.qualifiers:
                     table_translate = feature.qualifiers['transl_table'][0] 
                 else:
                     table_translate = 1
-                if str(cds_seq)[:3] in ['ATA','GTG','TTG','ATT','ACG']:
+                if str(cds_seq)[:3] in ['AAT','ATA','GTG','TTG','ATT','ACG','TCA','AGG']:
                     # ATA, GTG and TTG (Yokobori et al. 1999). 
                     # ATT is the start codon for the CytB gene
                     # in Halocynthia roretzi (Gissi and Pesole, 2003).
@@ -122,20 +135,19 @@ def get_cds_gb(args):
                     protein_id = feature.qualifiers['protein_id'][0] 
                 else:
                     protein_id = 'Null'
-                if 'gene' in feature.qualifiers:
-                    gene_id = feature.qualifiers['gene'][0] 
-                else:
-                    gene_id = feature.qualifiers['locus_tag'][0]
                 cds_seq_record = SeqRecord(cds_seq,id='gene:%s protein:%s'%(gene_id, protein_id), 
                                  description='strand %s length %d'%(feature.strand, len(cds_seq)))
                 pep_record = SeqRecord(pep,id='gene:%s protein:%s'%(gene_id, protein_id),
                              description='strand %s length %d'%(feature.strand, len(pep)))
                 cds.append(cds_seq_record)
                 proteins.append(pep_record)
-                #break 
+                break 
+        break     
     if args.print and args.format == 'dna':
         SeqIO.write(cds, sys.stdout, 'fasta')
     elif args.print and args.format == 'protein':
         SeqIO.write(proteins, sys.stdout, 'fasta')
-    elif args.output:
+    elif args.output and args.format == 'dna':
+        SeqIO.write(cds, args.output, 'fasta')
+    elif args.output and args.format == 'protein':
         SeqIO.write(proteins, args.output, 'fasta')

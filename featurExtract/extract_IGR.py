@@ -8,13 +8,17 @@ from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.database import create_db, genome_dict
 
-def get_intergenic(args):
+def get_IGR(args):
     '''
     parameters:
         args: parse from argparse
     return:
         elements write to a file or stdout
     '''
+    # GTF noncoding are annotated transcript,while GFF noncoding ared annotated gene
+    if not args.style:
+        sys.stderr.write("parameter -s should be assign \n")
+        sys.exit()
     genomeDict = genome_dict(args.genome) # load fasta 
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     gene_seq = pd.DataFrame(columns=['GeneID','Chrom','Start','End','Strand','Seq'])
@@ -47,12 +51,12 @@ def get_intergenic(args):
         chrom = pospair[2]
         this_id = pospair[3]
         strand = pospair[4]
-        # 处理正链
-        if this_start - last_end >= args.intergene_length:
+        # 处理正链 threshold length
+        if this_start - last_end >= args.IGR_length:
             intergenic_seq = genomeDict[chrom][last_end:this_start]
             intergenic_record = SeqRecord(intergenic_seq, 
                                 id="%s--%s"%(last_id, this_id), 
-                                description='strand %s start %d end %d length=%d'%(
+                                description='strand:%s start:%d end:%d length=%d'%(
                                 strand, last_end+1, this_start, len(intergenic_seq)))
             seq_out.append(intergenic_record)
     for i,pospair in enumerate(gene_minus[1:]):
@@ -63,13 +67,13 @@ def get_intergenic(args):
         this_id = pospair[3]
         strand = pospair[4]
         # 处理负链
-        if this_start - last_end >= args.intergene_length:
+        if this_start - last_end >= args.IGR_length:
             intergenic_seq = genomeDict[chrom][last_end:this_start]
             if strand == '-':
                 intergenic_seq.reverse_complement()
             intergenic_record = SeqRecord(intergenic_seq, 
                                 id="%s--%s"%(last_id, this_id), 
-                                description='strand %s tart %d end %d length=%d'%(
+                                description='strand:%s start:%d end:%d length=%d'%(
                                 strand, last_end+1, this_start, len(intergenic_seq)))
             seq_out.append(intergenic_record)
     
@@ -78,7 +82,7 @@ def get_intergenic(args):
     else:
         SeqIO.write(seq_out, args.output, "fasta") 
 
-def get_intergenic_gb(args):
+def get_IGR_gb(args):
     '''
     parameters:
         args: parse from argparse

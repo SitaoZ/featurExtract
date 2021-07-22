@@ -69,11 +69,4 @@ def get_promoter(args):
                 else:
                     SeqIO.write(promoterSeq, args.output, "fasta")
 
-                '''
-                if args.print:
-                    print(">{} {} {} {} {}".format(g.id,g.chrom,p_start_in_genome,p_end_in_genome,g.strand))
-                    print(promoter)
-                else:
-                    promoter_seq.to_csv(args.output, sep=',', index=False)
-                '''
                 break
