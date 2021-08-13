@@ -34,7 +34,7 @@ def uorf(transcript_id, chrom, strand, matural_transcript, coding_sequence):
     utr5 = matural_transcript[:start_codon]
     utr5_len = len(utr5)
     utr3 = matural_transcript[stop_codon:]
-    for i in range(0, utr5_len-3):
+    for i in range(0, utr5_len-3+1):
         # start codon find 
         if matural_transcript[i:i+3] == "ATG":
             for j in range(i+3,stop_codon,3):

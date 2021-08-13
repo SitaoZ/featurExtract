@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: featurExtract
-Version: 0.2.2
+Version: 0.2.4
 Summary: Extract genome ferature sequence for biologists
 Home-page: https://github.com/SitaoZ/featurExtract.git
 Author: zhusitao
@@ -69,7 +69,7 @@ featurExtract CDS -h
 featurExtract dORF -h
 featurExtract exon -h
 featurExtract intron -h
-featurExtract IGR -h
+featurExtract intergenic -h
 ```
 
 #### genBankExtract
