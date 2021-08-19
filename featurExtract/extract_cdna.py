@@ -103,6 +103,7 @@ def anchor_CDS(db, genome, transcript, style):
                 if i:
                     start_codon_s = i.start - 1
                     start_codon_e = i.start - 3
+                    break
                 else:
                     print('five_prime_UTR does not exist')
                 break
@@ -127,15 +128,16 @@ def anchor_CDS(db, genome, transcript, style):
                 # the last five_prime_UTR position should be saved in plus strand
                 if i:
                     start_codon_s = i.end + 1
-                    start_codon_e = i.end - 2
+                    start_codon_e = i.end + 3 # i.end - 2
                 else:
                     print('five_prime_UTR does not exist')
             for i in db.children(transcript, featuretype='three_prime_UTR', order_by='start'):
                 # occasionally a transcript has more then one three_prime_UTR
                 # the first three_prime_UTR position should be saved in plus strand
                 if i:
-                    stop_codon_s = i.start - 2
-                    stop_codon_e = i.start + 1
+                    stop_codon_s = i.start - 3 #i.start - 2
+                    stop_codon_e = i.start - 1 # i.start + 1
+                    break 
                 else:
                     print('three_prime_UTR does not exist')
         
@@ -218,14 +220,14 @@ def get_cdna(args):
                             if e.start >= start_codon_s :
                                 atg2firstexon += len(s) 
                             elif e.start < start_codon_s < e.end:
-                                truncated = e.end - start_codon_s + 1 # 反向减法
+                                truncated = e.end - start_codon_s # + 1 # 反向减法
                                 atg2firstexon += truncated
                     else:
                         # contain + .
                         if start_codon_s >= e.end:
                             atg2firstexon += len(s)
                         elif e.end > start_codon_s > e.start:
-                            truncated = start_codon_s - e.start + 1
+                            truncated = start_codon_s - e.start # + 1
                             atg2firstexon += truncated
                 seq = Seq(seq)
                 if t.strand == '-':
@@ -237,7 +239,7 @@ def get_cdna(args):
                                                                       atg2firstexon + cds_len)
                 else:
                     desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
-                                                                      atg2firstexon + 1 ,
+                                                                      atg2firstexon + 1,
                                                                       atg2firstexon + cds_len)
                 if args.upper:
                     seq = seq_upper_lower(seq,atg2firstexon,atg2firstexon + cds_len)
