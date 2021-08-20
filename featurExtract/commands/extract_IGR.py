@@ -6,7 +6,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
-from featurExtract.database import create_db, genome_dict
+from featurExtract.database.database import create_db, genome_dict
 
 def get_IGR(args):
     '''

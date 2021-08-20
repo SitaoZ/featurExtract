@@ -6,7 +6,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
-from featurExtract.database import create_db
+from featurExtract.database.database import create_db
 from featurExtract.utils.util import add_stop_codon,mRNA_type,seq_upper_lower
 
 '''

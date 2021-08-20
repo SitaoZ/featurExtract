@@ -7,7 +7,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.utils.util import mRNA_type
-from featurExtract.database import create_db
+from featurExtract.database.database import create_db
 
 
 def get_exon(args):

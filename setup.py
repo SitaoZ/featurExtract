@@ -2,22 +2,26 @@
 import os
 
 def readme():
-    with open("README.rst") as f:
-        return f.read()
+    with open("README.md") as f:
+        long_description = f.read()
+        return long_description
 
 from setuptools import setup 
 from featurExtract.version import __version__
 
 PACKAGES = [
-    "featurExtract"
+    "featurExtract",
+    "featurExtract.commands",
+    "featurExtract.database",
+    "featurExtract.utils"
 ]
 setup(
     name='featurExtract',
     version=__version__,
     keywords='genome feature, extract',
     description='Extract genome ferature sequence for biologists',
-    long_description_content_type='text/markdown',
     long_description=readme(),
+    long_description_content_type='text/markdown',
     entry_points = {'console_scripts': [
                        'featurExtract=featurExtract.command_gff:main',
                        'genBankExtract=featurExtract.command_gb:main'

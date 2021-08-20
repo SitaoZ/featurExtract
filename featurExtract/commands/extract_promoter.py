@@ -6,7 +6,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
-from featurExtract.database import genome_dict
+from featurExtract.database.database import genome_dict
 
 # https://pythonhosted.org/gffutils/autodocs/gffutils.Feature.html
 # 1-based coordinates

@@ -4,9 +4,9 @@ import gffutils
 import pandas as pd 
 from Bio import SeqIO
 from Bio.Seq import Seq
-from featurExtract.database import genome_dict
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
+from featurExtract.database.database import genome_dict
 from featurExtract.utils.util import utr3_type, utr5_type, mRNA_type
 
 def intron(genomeDict, chrom, transcript_id, strand, exons):

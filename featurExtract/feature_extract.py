@@ -7,17 +7,17 @@ import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from featurExtract.extract_UTR import utr
-from featurExtract.extract_uORF import get_uorf
-from featurExtract.extract_dORF import get_dorf
-from featurExtract.extract_CDS import get_cds
-from featurExtract.extract_promoter import get_promoter
-from featurExtract.extract_exon import get_exon
-from featurExtract.extract_intron import get_intron
-from featurExtract.extract_gene import get_gene
-from featurExtract.extract_IGR import get_IGR
-from featurExtract.extract_cdna import get_cdna
-from featurExtract.extract_mRNA import get_mRNA
+from featurExtract.commands.extract_UTR import utr
+from featurExtract.commands.extract_uORF import get_uorf
+from featurExtract.commands.extract_dORF import get_dorf
+from featurExtract.commands.extract_CDS import get_cds
+from featurExtract.commands.extract_promoter import get_promoter
+from featurExtract.commands.extract_exon import get_exon
+from featurExtract.commands.extract_intron import get_intron
+from featurExtract.commands.extract_gene import get_gene
+from featurExtract.commands.extract_IGR import get_IGR
+from featurExtract.commands.extract_cdna import get_cdna
+from featurExtract.commands.extract_mRNA import get_mRNA
 
 
 def create(args):

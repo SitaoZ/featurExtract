@@ -56,7 +56,7 @@ featurExtract CDS -h
 featurExtract dORF -h
 featurExtract exon -h
 featurExtract intron -h
-featurExtract IGR -h
+featurExtract intergenic -h
 ```
 
 #### genBankExtract
@@ -75,15 +75,19 @@ genBankExtract tRNA -h
 #### featurExtract
 
 ```bash
-# step 1 
-featurExtract create -g ath.gff3 
+# step 1 create database
+featurExtract create -f GFF -g ath.gff3 -o ath
 # step 2 command
-featurExtract promoter -l 200 -u 100 -f ath.fa -o promoter.csv
-featurExtract UTR  -o UTR.csv
-featurExtract uORF -o uORF.csv
-featurExtract CDS  -o CDS.csv
-featurExtract exon -f ath.fa -t AT1G01010.1 -p 
-featurExtract intron -f ath.fa -t AT1G01010.1 -p  
+# promoter whole genome
+featurExtract promoter -d ath.GFF -f ath.fa -l 200 -u 100 -o promoter.csv --output_format fasta
+# promoter one gene to stdout 
+featurExtract promoter -d ath.GFF -f ath.fa -l 200 -u 100 -g AT1G01010 -p --output_format fasta
+featurExtract UTR -d ath.GFF -f ath.fa -o UTR.csv -s GFF
+featurExtract uORF -d ath.GFF -f ath.fa -o uORF.csv -s GFF
+featurExtract CDS -d ath.GFF -f ath.fa -o CDS.csv -s GFF
+featurExtract mRNA -d ath.GFF -f ath.fa -o mRNA.fasta -s GFF --output_format fasta
+featurExtract exon -d ath.GFF -f ath.fa -t AT1G01010.1 -p -s GFF
+featurExtract intron -d ath.GFF -f ath.fa -t AT1G01010.1 -p -s GFF
 ```
     
 #### genBankExtract
