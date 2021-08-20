@@ -4,8 +4,8 @@ import gffutils
 import pandas as pd 
 from Bio.Seq import Seq
 from collections import defaultdict
-from featurExtract.util import utr3_type, utr5_type, mRNA_type
-from featurExtract.util import stop_codon_seq, add_stop_codon 
+from featurExtract.utils.util import utr3_type, utr5_type, mRNA_type
+from featurExtract.utils.util import stop_codon_seq, add_stop_codon 
 
 # table header 
 ['TranscriptID','Chrom', 'Strand','CDS Interval','uORF Start','uORF End','uORF Type','uORF Length','uORF']

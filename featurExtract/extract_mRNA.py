@@ -7,25 +7,13 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.database import create_db
-from featurExtract.util import utr3_type, utr5_type, mRNA_type
-from featurExtract.util import stop_codon_seq, add_stop_codon
+from featurExtract.utils.util import utr3_type, utr5_type, mRNA_type
+from featurExtract.utils.util import stop_codon_seq, add_stop_codon
 
 '''
 https://www.ncbi.nlm.nih.gov/genbank/genomes_gff/
 '''
 
-def seq_upper_lower(seq,start,end):
-    '''
-    parameter:
-     seq: sequence 
-     start: start codon position 
-     end: stop codon position 
-    '''
-    utr5 = seq[:start-1].lower()
-    coding = seq[start-1:end].upper()
-    utr3 = seq[end:].lower()
-    return utr5+coding+utr3
-    
 
 def plus_strand():
     pass
@@ -43,6 +31,7 @@ def get_mRNA(args):
     '''
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     mrna_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','CDS'])
+    mrna_record = []
     index = 0
     # assert GTF or GFF
     mRNA_str = mRNA_type(args.style)
@@ -76,11 +65,21 @@ def get_mRNA(args):
             seq = Seq(seq)
             if t.strand == '-':
                 seq = seq.reverse_complement()
-            mrna_seq.loc[index] = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,t.strand,seq]
-            index += 1
-            if index == 200:
-                break 
-        mrna_seq.to_csv(args.output, sep=',', index=False)
+            # csv output
+            if args.output_format == 'csv':
+                mrna_seq.loc[index] = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,t.strand,seq]
+                index += 1
+            # fasta 
+            elif args.output_format == 'fasta':
+                desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
+                                                                      len(utr5)+1 ,
+                                                                      len(utr5) + len(cds))
+                mrnaRecord = SeqRecord(seq, id=t.id.replace('transcript:',''), description=desc)
+                mrna_record.append(mrnaRecord)
+        if args.output_format == 'csv':
+            mrna_seq.to_csv(args.output, sep=',', index=False)
+        elif args.output_format == 'fasta':
+            SeqIO.write(mrna_record, args.output, "fasta")
     else:
         for t in db.features_of_type(mRNA_str, order_by='start'):
             if args.transcript in t.id:
@@ -109,13 +108,7 @@ def get_mRNA(args):
                 seq = Seq(seq)
                 if t.strand == '-':
                     seq= seq.reverse_complement()
-                index += 1
-                if t.strand == "-":
-                    desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
-                                                                      len(utr5)+1 ,
-                                                                      len(utr5) + len(cds))
-                else:
-                    desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
+                desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
                                                                       len(utr5)+1 ,
                                                                       len(utr5) + len(cds))
                 mrnaRecord = SeqRecord(seq, id=t.id.replace('transcript:', ''), description=desc)

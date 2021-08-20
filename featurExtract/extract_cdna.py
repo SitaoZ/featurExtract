@@ -7,7 +7,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.database import create_db
-
+from featurExtract.utils.util import add_stop_codon,mRNA_type,seq_upper_lower
 
 '''
 https://www.ncbi.nlm.nih.gov/genbank/genomes_gff/
@@ -18,37 +18,7 @@ def stop_codon(db, transcript, genome):
         s = codon.sequence(genome, use_strand=False) # 不反向互补,序列全部连接后再互补
     return s
 
-def add_stop_codon(seq, strand, stop_codon_seq):
-    if strand == '+':
-        seq += stop_codon_seq
-    elif strand == '-':
-        seq = stop_codon_seq + seq # 负链 stop codon 位置靠前
-    else:
-        seq += stop_codon_seq
-    return seq 
 
-def mRNA_type(file_format):
-    if file_format == 'GFF':
-        return 'mRNA'
-
-    elif file_format == 'GTF':
-        return 'transcript'
-    else:
-        sys.stderr.write("parameter -s should be assign \n")
-        sys.exit(1)
-
-def seq_upper_lower(seq,start,end):
-    '''
-    parameter:
-     seq: sequence 
-     start: start codon position 
-     end: stop codon position 
-    '''
-    utr5 = seq[:start].lower()
-    coding = seq[start:end].upper()
-    utr3 = seq[end:].lower()
-    return utr5+coding+utr3
-    
 def anchor_CDS(db, genome, transcript, style):
     '''
     parameters: 
@@ -128,15 +98,15 @@ def anchor_CDS(db, genome, transcript, style):
                 # the last five_prime_UTR position should be saved in plus strand
                 if i:
                     start_codon_s = i.end + 1
-                    start_codon_e = i.end + 3 # i.end - 2
+                    start_codon_e = i.end + 3
                 else:
                     print('five_prime_UTR does not exist')
             for i in db.children(transcript, featuretype='three_prime_UTR', order_by='start'):
                 # occasionally a transcript has more then one three_prime_UTR
                 # the first three_prime_UTR position should be saved in plus strand
                 if i:
-                    stop_codon_s = i.start - 3 #i.start - 2
-                    stop_codon_e = i.start - 1 # i.start + 1
+                    stop_codon_s = i.start - 3 
+                    stop_codon_e = i.start - 1
                     break 
                 else:
                     print('three_prime_UTR does not exist')
@@ -158,7 +128,8 @@ def get_cdna(args):
         elements write to a file or stdout
     '''
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    cdna_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','CDS'])
+    cdna_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start_genome','End_genome','Start_transcript','End_transcript','Strand','CDS'])
+    cdna_record = []
     index = 0
     # assert GTF or GFF
     mRNA_str = mRNA_type(args.style)
@@ -180,7 +151,7 @@ def get_cdna(args):
                         if e.start >= start_codon_s :
                             atg2firstexon += len(s)
                         elif e.start < start_codon_s < e.end:
-                            truncated = e.end - start_codon_s + 1 # 反向减法
+                            truncated = e.end - start_codon_s #  反向减法
                             atg2firstexon += truncated
                 else:
                     # contain + .
@@ -191,16 +162,33 @@ def get_cdna(args):
                         if start_codon_s >= e.end:
                             atg2firstexon += len(s)
                         elif e.end > start_codon_s > e.start:
-                            truncated = start_codon_s - e.start + 1
+                            truncated = start_codon_s - e.start 
                             atg2firstexon += truncated
             seq = Seq(seq)
             if t.strand == '-':
                 seq = seq.reverse_complement()
-            cdna_seq.loc[index] = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,t.strand,seq]
-            index += 1
-            if index == 200:
-                break 
-        cdna_seq.to_csv(args.output, sep=',', index=False)
+            if args.upper:
+                seq = seq_upper_lower(seq,atg2firstexon,atg2firstexon + cds_len)
+            # position in transcript 1 based 
+            cds_start_transcript = atg2firstexon + 1
+            cds_end_transcript = atg2firstexon + cds_len
+            # csv output
+            if args.output_format == 'csv':
+                cdna_seq.loc[index] = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,
+                                       cds_start_transcript,cds_end_transcript,t.strand,seq]
+                index += 1
+            # fasta output
+            elif args.output_format == 'fasta':
+                desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
+                                                                      cds_start_transcript,
+                                                                      cds_end_transcript)
+                cdnaRecord = SeqRecord(seq, id=t.id.replace('transcript:',''), description=desc)
+                cdna_record.append(cdnaRecord)
+        
+        if args.output_format == 'csv':
+            cdna_seq.to_csv(args.output, sep=',', index=False)
+        elif args.output_format == 'fasta':
+            SeqIO.write(cdna_record, args.output, "fasta")
     else:
         for t in db.features_of_type(mRNA_str, order_by='start'):
             if args.transcript in t.id:
@@ -220,25 +208,19 @@ def get_cdna(args):
                             if e.start >= start_codon_s :
                                 atg2firstexon += len(s) 
                             elif e.start < start_codon_s < e.end:
-                                truncated = e.end - start_codon_s # + 1 # 反向减法
+                                truncated = e.end - start_codon_s  # 反向减法
                                 atg2firstexon += truncated
                     else:
                         # contain + .
                         if start_codon_s >= e.end:
                             atg2firstexon += len(s)
                         elif e.end > start_codon_s > e.start:
-                            truncated = start_codon_s - e.start # + 1
+                            truncated = start_codon_s - e.start
                             atg2firstexon += truncated
                 seq = Seq(seq)
                 if t.strand == '-':
                     seq= seq.reverse_complement()
-                index += 1
-                if t.strand == "-":
-                    desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
-                                                                      atg2firstexon + 1,
-                                                                      atg2firstexon + cds_len)
-                else:
-                    desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
+                desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
                                                                       atg2firstexon + 1,
                                                                       atg2firstexon + cds_len)
                 if args.upper:

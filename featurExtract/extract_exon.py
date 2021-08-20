@@ -6,7 +6,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
-from featurExtract.util import mRNA_type
+from featurExtract.utils.util import mRNA_type
 from featurExtract.database import create_db
 
 

@@ -21,6 +21,7 @@ def get_promoter(args):
     genomeDict = genome_dict(args.genome) # load fasta 
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     promoter_seq = pd.DataFrame(columns=['GeneID','Chrom','Start','End','Strand','Promoter'])
+    promoter_record = []
     index = 0 
     if not args.gene:
         for g in db.all_features(featuretype='gene', order_by="seqid"):
@@ -31,18 +32,29 @@ def get_promoter(args):
                     continue
                 p_end = g.start + args.utr5_upper_length - 1 # include first base of TSS, transform 1-based to 0-based
                 promoter = genomeDict[g.chrom][p_start:p_end]
-                # print(promoter)
             elif g.strand == "-":
                 gene_seq = g.sequence(args.genome, use_strand=True)
                 p_start = g.end - args.utr5_upper_length - 1
                 p_end = g.end + int(args.promoter_length) - 1
                 promoter = genomeDict[g.chrom][p_start:p_end].reverse_complement()
-                # print(promoter)
             p_start_in_genome = p_start
             p_end_in_genome = p_end
-            promoter_seq.loc[index] = [g.id,g.chrom,p_start_in_genome,p_end_in_genome,g.strand,promoter]
-            index += 1
-        promoter_seq.to_csv(args.output, sep=',', index=False)
+            if args.output_format == 'csv':
+                promoter_seq.loc[index] = [g.id.replace('transcript:',''), g.chrom, p_start_in_genome,
+                                                                  p_end_in_genome, g.strand, promoter]
+                index += 1
+            # default fasta
+            else:
+                desc='strand:%s start:%d end:%d length=%d'%(g.strand, p_start_in_genome,
+                                                         p_end_in_genome, len(promoter))
+                promoterRecord = SeqRecord(promoter, id=g.id.replace('transcript:',''), description=desc)
+                promoter_record.append(promoterRecord)
+        # csv
+        if args.output_format == 'csv':
+            promoter_seq.to_csv(args.output, sep=',', index=False)
+        # default fasta
+        else:
+            SeqIO.write(promoter_record, args.output, "fasta")
     else:
         for g in db.all_features(featuretype='gene', order_by="seqid"):
             if args.gene in g.id:
@@ -53,7 +65,6 @@ def get_promoter(args):
                         continue
                     p_end = g.start + args.utr5_upper_length
                     promoter = genomeDict[g.chrom][p_start:p_end]
-                    # print(promoter)
                 elif g.strand == "-":
                     gene_seq = g.sequence(args.genome, use_strand=True)
                     p_start = g.end - args.utr5_upper_length
@@ -61,14 +72,20 @@ def get_promoter(args):
                     promoter = genomeDict[g.chrom][p_start:p_end].reverse_complement()
                 p_start_in_genome = p_start
                 p_end_in_genome = p_end
-                promoter_seq.loc[index] = [g.id,g.chrom,p_start_in_genome,p_end_in_genome,g.strand,promoter]
+                promoter_seq.loc[index] = [args.gene, g.chrom, p_start_in_genome,
+                                          p_end_in_genome, g.strand, promoter]
                 index += 1
                 promoterSeq = SeqRecord(promoter,id=args.gene, 
-                              description='chrom %s strand %s promoter start %d end %d length=%d'%(
+                              description='chrom:%s strand:%s promoter start:%d end:%d length=%d'%(
                               g.chrom, g.strand, p_start_in_genome, p_end_in_genome, len(promoter)))
                 if args.print:
-                    SeqIO.write(promoterSeq, sys.stdout, "fasta")
+                    if args.output_format == 'csv':
+                        promoter_seq.to_csv(sys.stdout, sep=',', index=False)
+                    else:
+                        SeqIO.write(promoterSeq, sys.stdout, "fasta")
                 else:
-                    SeqIO.write(promoterSeq, args.output, "fasta")
-
+                    if args.output_format == 'csv':
+                        promoter_seq.to_csv(args.output, sep=',', index=False)
+                    else:
+                        SeqIO.write(promoterSeq, args.output, "fasta")
                 break

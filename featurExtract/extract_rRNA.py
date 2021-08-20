@@ -21,7 +21,10 @@ def get_rRNA_gb(args):
                 # part.strand 会将FeatureLocation -1的反向互补
                 product = feature.qualifiers['product'][0] if 'product' in feature.qualifiers else 'Null'
                 gene_id = feature.qualifiers['gene'][0] if 'gene' in feature.qualifiers else 'Null'
-                rRNA_seq_record = SeqRecord(rRNA_seq, id='gene:%s'%(gene_id), description='%s strand %s length %d'%(product,feature.strand, len(rRNA_seq)))
+                rRNA_seq_record = SeqRecord(rRNA_seq, 
+                                            id='gene:%s'%(gene_id), 
+                                            description='%s strand %s length %d'%(product,feature.strand, len(rRNA_seq))
+                                           )
                 rRNA.append(rRNA_seq_record)
                 #break 
     if args.print and args.format == 'dna':

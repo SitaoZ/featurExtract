@@ -7,7 +7,7 @@ from Bio.Seq import Seq
 from featurExtract.database import genome_dict
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
-from featurExtract.util import utr3_type, utr5_type, mRNA_type
+from featurExtract.utils.util import utr3_type, utr5_type, mRNA_type
 
 def intron(genomeDict, chrom, transcript_id, strand, exons):
     '''
@@ -22,7 +22,11 @@ def intron(genomeDict, chrom, transcript_id, strand, exons):
             # exon 与exon 不相连，就是intron的位置
             intron_seq= genomeDict[chrom][s-1:e]
             #intron_seq= Seq(intron_seq)
-            intronRecord = SeqRecord(intron_seq, id=transcript_id, description='strand %s intron %d start %d end %d length=%d'%(strand, intron_index, s, e, len(intron_seq)))
+            intronRecord = SeqRecord(intron_seq, id=transcript_id, 
+                                     description='strand %s intron %d start %d end %d length=%d'%(
+                                     strand, intron_index, s, e, len(intron_seq)
+                                        )
+                                    )
             introns.append(intronRecord)
             intron_index += 1
     return introns 

@@ -6,7 +6,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
-from featurExtract.util import utr3_type, utr5_type, mRNA_type
+from featurExtract.utils.util import utr3_type, utr5_type, mRNA_type
 
 def utr(args):
     '''

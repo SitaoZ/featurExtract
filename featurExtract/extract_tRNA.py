@@ -21,7 +21,10 @@ def get_tRNA_gb(args):
                 # part.strand 会将FeatureLocation -1的反向互补
                 product = feature.qualifiers['product'][0] if 'product' in feature.qualifiers else 'Null'
                 gene_id = feature.qualifiers['gene'][0] if 'gene' in feature.qualifiers else 'Null'
-                tRNA_seq_record = SeqRecord(tRNA_seq, id='gene:%s'%(gene_id), description='%s strand %s length %d'%(product,feature.strand, len(tRNA_seq)))
+                tRNA_seq_record = SeqRecord(tRNA_seq, 
+                                            id='gene:%s'%(gene_id),
+                                            description='%s strand %s length %d'%(product,feature.strand, len(tRNA_seq))
+                                           )
                 tRNA.append(tRNA_seq_record)
                 #break 
     if args.print and args.format == 'dna':

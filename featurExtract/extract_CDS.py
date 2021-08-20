@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import sys
 import gffutils
 import pandas as pd 
@@ -7,7 +8,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.database import create_db
-
+from featurExtract.utils.util import add_stop_codon,mRNA_type
 
 '''
 https://www.ncbi.nlm.nih.gov/genbank/genomes_gff/
@@ -18,24 +19,6 @@ def stop_codon(db, transcript, genome):
         s = codon.sequence(genome, use_strand=False) # 不反向互补,序列全部连接后再互补
     return s
 
-def add_stop_codon(seq, strand, stop_codon_seq):
-    if strand == '+':
-        seq += stop_codon_seq
-    elif strand == '-':
-        seq = stop_codon_seq + seq # 负链 stop codon 位置靠前
-    else:
-        seq += stop_codon_seq
-    return seq 
-
-def mRNA_type(file_format):
-    if file_format == 'GFF':
-        return 'mRNA'
-
-    elif file_format == 'GTF':
-        return 'transcript'
-    else:
-        sys.stderr.write("parameter -s should be assign \n")
-        sys.exit(1)
 
 def get_cds(args):
     '''
@@ -46,6 +29,7 @@ def get_cds(args):
     '''
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     cds_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','CDS'])
+    cds_record = []
     index = 0
     # assert GTF or GFF
     mRNA_str = mRNA_type(args.style)
@@ -62,11 +46,26 @@ def get_cds(args):
             seq = Seq(seq)
             if t.strand == '-':
                 seq = seq.reverse_complement()
-            cds_seq.loc[index] = [t.id,t.chrom,t.start,t.end,t.strand,seq]
-            index += 1
-            if index == 100:
-                break 
-        cds_seq.to_csv(args.output, sep=',', index=False)
+            # csv output
+            if args.output_format == 'csv':
+                cds_seq.loc[index] = [t.id,t.chrom,t.start,t.end,t.strand,seq]
+                index += 1
+            # defalut fasta
+            else:
+                desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,
+                                                                      t.start,
+                                                                      t.end,
+                                                                      len(seq),
+                                                                      cds_start_transcript,
+                                                                      cds_end_transcript)
+                cdsRecord = SeqRecord(seq, id=t.id.replace('transcript:',''), description=desc)
+                cds_record.append(cdsRecord)
+        # csv
+        if args.output_format == 'csv':
+            cds_seq.to_csv(args.output, sep=',', index=False)
+        # default fasta
+        else: 
+            SeqIO.write(cds_record, args.output, "fasta") 
     else:
         for t in db.features_of_type(mRNA_str, order_by='start'):
             if args.transcript in t.id:

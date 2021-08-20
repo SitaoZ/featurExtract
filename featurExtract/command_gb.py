@@ -12,7 +12,7 @@ def main_usage():
     print("\n\033[1;33;40mProgram: \033[0m\033[1;35;40m genBankExtract \033[1;31;40m(pipeline for genome feature extract)\033[0m")
     print("\033[1;33;40mVersion: \033[0m\033[1;32;40m %s\033[0m"%(__version__))
     print("\033[1;33;40mContact: \033[0m\033[1;32;40m Sitao Zhu <zhusitao1990@163.com>\033[0m")
-    print("\033[1;33;40mUsage  : \033[0m\033[1;35;40m genBankExtract\033[0m \033[1;31;40m<command>\033[0m")
+    print("\033[1;33;40mUsage  : \033[0m\033[1;35;40m genBankExtract\033[0m \033[1;31;40m<command> [parameters]\033[0m")
     print("\033[1;33;40mCommand: \033[0m")
     sub_usage(["promoter", "extract promoter from GenBank"])
     sub_usage(["gene    ", "extract gene sequence from GenBank"])

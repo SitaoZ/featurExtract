@@ -147,10 +147,14 @@ parser_utr.set_defaults(func=UTR)
 
 # CDS subcommand
 parser_cds = subparsers.add_parser('CDS', help='extract coding sequence from GenBank')
-parser_cds.add_argument('-g', '--genbank', type=str, help='GenBank file path')
-parser_cds.add_argument('-o', '--output', type=str, help='output file path')
-parser_cds.add_argument('-f', '--format', choices = ['dna','protein'], type=str, help='output file path')
-parser_cds.add_argument('-p', '--print', action="store_true", help='boolean type; stdin')
+parser_cds.add_argument('-g', '--genbank', type=str, required=True, 
+                        help='GenBank file path')
+parser_cds.add_argument('-o', '--output', type=str, 
+                        help='output file path')
+parser_cds.add_argument('-f', '--format', choices = ['dna','protein'], 
+                        type=str, help='output file path')
+parser_cds.add_argument('-p', '--print', action="store_true", 
+                        help='output to stdout')
 parser_cds.set_defaults(func=CDS)
 
 # dORF subcommand 
