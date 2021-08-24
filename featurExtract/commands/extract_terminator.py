@@ -63,7 +63,7 @@ def get_terminator(args):
             if args.gene in g.id:
                 if g.strand == "+":
                     gene_seq = g.sequence(args.genome, use_strand=True)
-                    t_start = g.end - args.utr3_upper_length
+                    t_start = g.end - args.utr3_upper_length # 往后数，和promoter不一样，不需要-1
                     if t_start < 0 :
                         continue
                     t_end = g.end + int(args.terminator_length)
