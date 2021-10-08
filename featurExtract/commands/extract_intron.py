@@ -16,11 +16,12 @@ def intron(genomeDict, chrom, transcript_id, strand, exons):
     left = exons[1:-1]
     intron_index = 1
     for i in range(0,len(left), 2):
-        s = left[i]
-        e = left[i+1]
+        s = left[i]   # intron start
+        e = left[i+1] # intron end, shoukd be minus 1 
         if s+1 != e:
             # exon 与exon 不相连，就是intron的位置
-            intron_seq= genomeDict[chrom][s-1:e]
+            # 注意索引的点，
+            intron_seq= genomeDict[chrom][s:e-1]
             #intron_seq= Seq(intron_seq)
             intronRecord = SeqRecord(intron_seq, id=transcript_id, 
                                      description='strand %s intron %d start %d end %d length=%d'%(
@@ -59,6 +60,17 @@ def get_intron(args):
         else:
             SeqIO.write(introns, sys.stdout, "fasta")
     else:
-        print('transcript id needed!')
-        sys.exit(1)
+        whole_introns = []
+        for t in db.features_of_type(mRNA_str, order_by='start'):
+            if t.id:
+                exons = [] # exon position include start and end
+                for e in db.children(t, featuretype='exon', order_by='start'):
+                    exons.append(e.start)
+                    exons.append(e.end)
+                introns = intron(genomeDict, t.chrom, t.id, t.strand, exons)
+                whole_introns.append(introns)
+        if not args.print:
+            SeqIO.write(whole_introns, args.output, "fasta")
+        else:
+            SeqIO.write(whole_introns, sys.stdout, "fasta") 
         
