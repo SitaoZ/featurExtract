@@ -27,6 +27,7 @@ def get_cds(args):
     return:
         elements write to a file or stdout
     '''
+    print(args)
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     cds_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','CDS'])
     cds_record = []
@@ -36,10 +37,17 @@ def get_cds(args):
     if not args.transcript:
         for t in db.features_of_type(mRNA_str, order_by='start'):
             seq = ''
+            cds_start_transcript = 0
+            cds_end_transcript = 0
             for c in db.children(t, featuretype='CDS', order_by='start'):
                 # 不反向互补，对于负链要得到全部的cds后再一次性反向>互补
                 s = c.sequence(args.genome, use_strand=False)
                 seq += s
+                if not cds_start_transcript :
+                    cds_start_transcript = c.start - t.start
+                cds_end_transcript += len(s)
+            cds_end_transcript = cds_end_transcript + cds_start_transcript
+            
             if args.style == 'GTF':
                 stop_codon_seq = stop_codon(db, t, args.genome)
                 seq = add_stop_codon(seq, t.strand, stop_codon_seq)
@@ -60,12 +68,16 @@ def get_cds(args):
                                                                       cds_end_transcript)
                 cdsRecord = SeqRecord(seq, id=t.id.replace('transcript:',''), description=desc)
                 cds_record.append(cdsRecord)
+            # break 
         # csv
         if args.output_format == 'csv':
             cds_seq.to_csv(args.output, sep=',', index=False)
         # default fasta
-        else: 
-            SeqIO.write(cds_record, args.output, "fasta") 
+        elif args.output_format == 'fasta': 
+            with open(args.output,'w') as handle:
+                SeqIO.write(cds_record, handle, "fasta") 
+        else:
+            sys.exit('output format not be specified')
     else:
         for t in db.features_of_type(mRNA_str, order_by='start'):
             if args.transcript in t.id:

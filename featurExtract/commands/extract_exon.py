@@ -41,8 +41,23 @@ def get_exon(args):
         else:
             SeqIO.write(out, sys.stdout, "fasta")
     else:
-        print('transcript id needed!')
-        sys.exit(1)
+        whole_exons = []
+        for t in db.features_of_type(mRNA_str, order_by='start'):
+            exon_index = 1
+            for e in db.children(t, featuretype='exon', order_by='start'):
+                exon = e.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
+                exon = Seq(exon)
+                if t.strand == '-':
+                    exon = exon.reverse_complement()
+                exonRecord = SeqRecord(exon,id=t.id,
+                             description='strand %s exon %d start %d end %d length=%d'%(t.strand,
+                                        exon_index, e.start, e.end, len(exon)))
+                whole_exons.append(exonRecord)
+                exon_index += 1
+        if not args.print:
+            SeqIO.write(whole_exons, args.output, "fasta")
+        else:
+            SeqIO.write(whole_exons, sys.stdout, "fasta")
         
 
 def get_exon_gb(args):

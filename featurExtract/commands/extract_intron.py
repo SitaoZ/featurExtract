@@ -23,9 +23,10 @@ def intron(genomeDict, chrom, transcript_id, strand, exons):
             # 注意索引的点，
             intron_seq= genomeDict[chrom][s:e-1]
             #intron_seq= Seq(intron_seq)
+            # 1 based position
             intronRecord = SeqRecord(intron_seq, id=transcript_id, 
                                      description='strand %s intron %d start %d end %d length=%d'%(
-                                     strand, intron_index, s, e, len(intron_seq)
+                                     strand, intron_index, s+1, e-1, len(intron_seq)
                                         )
                                     )
             introns.append(intronRecord)
@@ -68,7 +69,7 @@ def get_intron(args):
                     exons.append(e.start)
                     exons.append(e.end)
                 introns = intron(genomeDict, t.chrom, t.id, t.strand, exons)
-                whole_introns.append(introns)
+                whole_introns.extend(introns)
         if not args.print:
             SeqIO.write(whole_introns, args.output, "fasta")
         else:
