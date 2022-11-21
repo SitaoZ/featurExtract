@@ -1,7 +1,7 @@
 Installation
 ============
 
-Source code manner
+git
 ------------------
 Using `git`::
 
