@@ -1,11 +1,16 @@
 Installation
 ============
 
+Source code manner
+------------------
 Using `git`::
 
     git clone https://github.com/SitaoZ/featurExtract.git
     cd featurExtract
     python setup.py install
+
+pip 
+---
 
 Or `pip`::
 

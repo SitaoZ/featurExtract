@@ -12,6 +12,7 @@ Welcome to featurExtract's documentation!
 
    introduction
    install
+   tutorial
    about
 
 
