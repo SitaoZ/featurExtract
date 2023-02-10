@@ -1,19 +1,5 @@
 # Overview
 
-The featurExtract is python package for bioinformatics.  
-The packages contains two executable command programs.  
-The first executable program is featurExtract including  
-ten subroutines termed create, gene, promoter, UTR, uORF,  
-CDS, dORF, exon, intron, intergenic. The create subroutine is   
-used for creating database. The promoter subroutine is used  
-for extracting promoter sequence. uORF subroutine is used  
-for extracting upstream open reading frames sequence. UTR  
-subroutine is used for extracting untranslated region sequence.  
-CDS subroutine is used for extracting coding sequence.intergenic  
-subroutine is used for extracting intergenic sequence between two  
-genes. The second executable program is genBankExtract including  
-four subroutines termed gene, CDS, rRNA, tRNA.
-
 featurExtract is a Python package for bioinformatics, containing two command programs. The first, featurExtract, includes ten subroutines: create, gene, promoter, UTR, uORF, CDS, dORF, exon, intron and intergenic. The create subroutine is used to create a database, while the promoter subroutine is used to extract promoter sequences. The uORF subroutine extracts upstream open reading frames sequences, and the UTR subroutine extracts untranslated region sequences. The CDS subroutine extracts coding sequences and the intergenic subroutine extracts intergenic sequences between two genes. The second command program, genBankExtract, includes four subroutines: gene, CDS, rRNA and tRNA.
 
 
