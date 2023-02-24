@@ -3,6 +3,7 @@ import os
 import sys
 import gffutils
 import pandas as pd 
+from tqdm import tqdm
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -20,6 +21,8 @@ def stop_codon(db, transcript, genome):
     return s
 
 
+_CSV_HEADER = ['TranscriptID','Chrom','Start','End','Strand','CDS']
+
 def get_cds(args):
     '''
     parameters:
@@ -27,15 +30,20 @@ def get_cds(args):
     return:
         elements write to a file or stdout
     '''
-    print(args)
+    # print(args)
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    cds_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','CDS'])
+    # dict
+    cds_seq_list = []
+    # cds_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','CDS'])
     cds_record = []
     index = 0
     # assert GTF or GFF
     mRNA_str = mRNA_type(args.style)
+    # loop all transcript in genome
     if not args.transcript:
-        for t in db.features_of_type(mRNA_str, order_by='start'):
+        for t in tqdm(db.features_of_type(mRNA_str, order_by='start'), \
+                                   total = len(list(db.features_of_type(mRNA_str, order_by='start'))),\
+                                   ncols = 80, desc="CDS Processing :"):
             seq = ''
             cds_start_transcript = 0
             cds_end_transcript = 0
@@ -56,8 +64,11 @@ def get_cds(args):
                 seq = seq.reverse_complement()
             # csv output
             if args.output_format == 'csv':
-                cds_seq.loc[index] = [t.id,t.chrom,t.start,t.end,t.strand,seq]
-                index += 1
+                # dict 
+                # cds_seq.loc[index] = [t.id,t.chrom,t.start,t.end,t.strand,seq]
+                # index += 1
+                it = [t.id,t.chrom,t.start,t.end,t.strand,seq]
+                cds_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
             # defalut fasta
             else:
                 desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,
@@ -71,6 +82,7 @@ def get_cds(args):
             # break 
         # csv
         if args.output_format == 'csv':
+            cds_seq = pd.DataFrame.from_dict(cds_seq_list)
             cds_seq.to_csv(args.output, sep=',', index=False)
         # default fasta
         elif args.output_format == 'fasta': 
@@ -79,6 +91,7 @@ def get_cds(args):
         else:
             sys.exit('output format not be specified')
     else:
+        # only one transcript
         for t in db.features_of_type(mRNA_str, order_by='start'):
             if args.transcript in t.id:
                 seq = ''
@@ -92,8 +105,8 @@ def get_cds(args):
                 seq = Seq(seq)
                 if t.strand == '-':
                     seq= seq.reverse_complement()
-                cds_seq.loc[index] = [t.id,t.chrom,t.start,t.end,t.strand,seq]
-                index += 1
+                # cds_seq.loc[index] = [t.id,t.chrom,t.start,t.end,t.strand,seq]
+                # index += 1
                 desc='strand %s start %d end %d length=%d'%(t.strand,t.start,t.end,len(seq))
                 cdsRecord = SeqRecord(seq, id=t.id, description=desc)
                 if args.print:

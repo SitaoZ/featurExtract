@@ -2,6 +2,7 @@
 import sys
 import gffutils
 import pandas as pd 
+from tqdm import tqdm
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -26,7 +27,9 @@ def get_IGR(args):
     seq_out = []
     gene_plus = []
     gene_minus = []
-    for g in db.features_of_type('gene', order_by='start'):
+    for g in tqdm(db.features_of_type('gene', order_by='start'), \
+                  total = len(list(db.features_of_type('gene', order_by='start'))), \
+                  ncols = 80, desc = "IGR Processing :"):
         #seq = g.sequence(args.genome, use_strand=False)
         #seq = Seq(seq)
         start = g.start
@@ -34,7 +37,8 @@ def get_IGR(args):
         if g.strand == '+':
             gene_plus.append((start, end, g.chrom, g.id, '+'))
         elif g.strand == '-':
-            gene_minus.append((start, end, g.chrom, g.id, '-'))
+            # gene_minus.append((start, end, g.chrom, g.id, '-'))
+            gene_plus.append((start, end, g.chrom, g.id, '-'))
             #seq = seq.reverse_complement()
             #gene_seq.loc[index] = [g.id,g.chrom,g.start,g.end,g.strand,seq]
             #index += 1

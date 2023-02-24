@@ -2,7 +2,6 @@
 import sys
 import gffutils
 import pandas as pd 
-from tqdm import tqdm 
 from Bio.Seq import Seq
 from collections import defaultdict
 from featurExtract.utils.util import utr3_type, utr5_type, mRNA_type
@@ -141,8 +140,7 @@ def get_dorf(args):
     """
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     # csv
-    # dORF_seq = pd.DataFrame(columns=_dORF_csv_header)
-    dORF_seq_list = []
+    dORF_seq = pd.DataFrame(columns=_dORF_csv_header)
     # gff
     dORF_gff = open(args.output,'w')
     # fasta
@@ -151,9 +149,7 @@ def get_dorf(args):
     mRNA_str = mRNA_type(args.style)
     index = 0
     if not args.transcript:
-        for t in tqdm(db.features_of_type(mRNA_str, order_by='start'), \
-                      total = len(list(db.features_of_type(mRNA_str, order_by='start'))), \
-                      ncols = 80, desc = "dORF Processing:"):
+        for t in db.features_of_type(mRNA_str, order_by='start'):
             # primary transcript (pt) 是基因组上的转录本的序列，
             # 有的会包括intron，所以提取的序列和matural transcript 不一致
             # print(t)
@@ -182,14 +178,18 @@ def get_dorf(args):
             if t.strand == '-':
                 cds = cds.reverse_complement()
             dORF_dict = uorf_procedure_oriented(t.id, t.chrom, t.strand, mt, cds)
-            # loop all dORF
             for key in sorted(dORF_dict.keys()):
+                #print(key,len(uORF_dict[key]))
+                for it in dORF_dict[key]:
+                    #print(it)
+                    dORF_seq.loc[index] = it
+                    index += 1
+                # print(key,len(uORF_dict[key]))
                 for it in dORF_dict[key]:
                     # csv output format 
                     if args.output_format == 'csv':
-                        # dORF_seq.loc[index] = it
-                        # index += 1
-                        dORF_seq_list.append(dict((_dORF_csv_header[i],it[i]) for i in range(len(_dORF_csv_header))))
+                        dORF_seq.loc[index] = it
+                        index += 1
                     elif args.output_format == 'fasta':
                         dorf_id = ".".join(map(str,[it[0], it[4], it[5], it[6]]))
                         seq = it[8] # it[8] is a Seq type
@@ -210,7 +210,6 @@ def get_dorf(args):
                         for feature_line in features_gff_lines:
                             dORF_gff.write(feature_line+"\n")
         if args.output_format == 'csv':
-            dORF_seq = pd.DataFrame.from_dict(dORF_seq_list)
             dORF_seq.to_csv(args.output, sep=',', index=False)
         elif args.output_format == 'gff':
             dORF_gff.close()
@@ -255,12 +254,12 @@ def get_dorf(args):
                 dORF_dict = dORF_.dorf_parse()
                 dorf_location_genome = [] # for schematic on genome # 3D list 
                 for key in sorted(dORF_dict.keys()):
+                    # print(key,len(uORF_dict[key]))
                     for it in dORF_dict[key]:
                         # csv output format 
                         if args.output_format == 'csv':
-                            # dORF_seq.loc[index] = it
-                            # index += 1
-                            dORF_seq_list.append(dict((_dORF_csv_header[i],it[i]) for i in range(len(_dORF_csv_header))))
+                            dORF_seq.loc[index] = it
+                            index += 1
                         elif args.output_format == 'fasta':
                             dorf_id = ".".join(map(str,[it[0], it[4], it[5], it[6]]))
                             seq = it[8] # it[8] is a Seq type
@@ -303,7 +302,6 @@ def get_dorf(args):
                     figure.draw()
                 
                 if args.output_format == 'csv':
-                    dORF_seq = pd.DataFrame.from_dict(dORF_seq_list)
                     dORF_seq.to_csv(args.output, sep=',', index=False)
                 elif args.output_format == 'gff':
                     dORF_gff.close()

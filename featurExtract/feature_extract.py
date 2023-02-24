@@ -155,13 +155,13 @@ parser_promoter.add_argument('-f', '--genome', type=str, required=True,
                              help='genome fasta path')
 parser_promoter.add_argument('-g', '--gene', type=str, 
                              help='specific gene; if not given, return whole genes')
-parser_promoter.add_argument('-l', '--promoter_length', type=int, default=0,
-                             help='promoter length before TSS')
-parser_promoter.add_argument('-u', '--utr5_upper_length', type=int, default=0,
-                             help='utr5 length after TSS')
+parser_promoter.add_argument('-l', '--promoter_length', type=int, default=100,
+                             help='promoter length before TSS (default 100 nt)')
+parser_promoter.add_argument('-u', '--utr5_upper_length', type=int, default=10,
+                             help='5\' utr length after TSS (default 10 nt)')
 parser_promoter.add_argument('-o', '--output', type=str, 
                              help = 'output file path')
-parser_promoter.add_argument('--output_format', type=str, choices=['csv','fasta'], 
+parser_promoter.add_argument('-t', '--output_format', type=str, choices=['csv','fasta'], 
                              help = 'output format')
 parser_promoter.add_argument('-p', '--print', action="store_true", 
                              help = 'output to stdout')
@@ -176,13 +176,13 @@ parser_terminator.add_argument('-f', '--genome', type=str, required=True,
                              help='genome fasta path')
 parser_terminator.add_argument('-g', '--gene', type=str,
                              help='specific gene; if not given, return whole genes')
-parser_terminator.add_argument('-l', '--terminator_length', type=int, default=0,
-                             help='terminator length')
-parser_terminator.add_argument('-u', '--utr3_upper_length', type=int, default=0,
-                             help='utr3 length')
+parser_terminator.add_argument('-l', '--terminator_length', type=int, default=100,
+                             help='terminator length (default 100 nt)')
+parser_terminator.add_argument('-u', '--utr3_upper_length', type=int, default=10,
+                             help='3\' length (default 10 nt)')
 parser_terminator.add_argument('-o', '--output', type=str,
                              help = 'output file path')
-parser_terminator.add_argument('--output_format', type=str, choices=['csv','fasta'],
+parser_terminator.add_argument('-t', '--output_format', type=str, choices=['csv','fasta'],
                              help = 'output format')
 parser_terminator.add_argument('-p', '--print', action="store_true",
                              help = 'output to stdout')
@@ -291,9 +291,9 @@ parser_uORF.add_argument('-t', '--output_format', choices=['csv','fasta','gff'],
                         help='output format ')
 parser_uORF.add_argument('-o', '--output', type=str, 
                          help='output file path')
-parser_uORF.add_argument('-m', '--schematic_without_intron', type=str,
+parser_uORF.add_argument('-m', '--schematic_without_intron', action='store_false',default='False',
                          help='schematic figure file for uORF, CDS and transcript without intron')
-parser_uORF.add_argument('-n', '--schematic_with_intron', type=str,
+parser_uORF.add_argument('-n', '--schematic_with_intron', action='store_false',default='False',
                          help='schematic figure file for uORF, CDS and transcript with intron')
 parser_uORF.add_argument('-s', '--style', choices=['GFF','GTF'], 
                          help = 'GTF database or GFF database')
@@ -331,8 +331,10 @@ parser_dORF.add_argument('-t', '--output_format', choices=['csv','fasta','gff'],
                         help='output format ')
 parser_dORF.add_argument('-o', '--output', type=str, 
                          help='output file path')
-parser_dORF.add_argument('-p', '--print', action="store_true", 
-                         help='output to stdout')
+parser_dORF.add_argument('-m', '--schematic_without_intron', type=str,
+                         help='schematic figure file for dORF, CDS and transcript without intron')
+parser_dORF.add_argument('-n', '--schematic_with_intron', type=str,
+                         help='schematic figure file for dORF, CDS and transcript with intron')
 parser_dORF.add_argument('-s', '--style', choices=['GFF','GTF'], 
                          help = 'GTF database or GFF database')
 parser_dORF.set_defaults(func=dORF)
@@ -372,7 +374,7 @@ parser_intron.set_defaults(func=intron)
 
 
 args = parser.parse_args()
-print('[%s runing ...]'%(time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())))
+# print('[%s runing ...]'%(time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())))
 args.func(args)
-print('[%s finished ...]'%(time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())))
+# print('[%s finished ...]'%(time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())))
 

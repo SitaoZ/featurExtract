@@ -2,12 +2,14 @@
 import sys
 import gffutils
 import pandas as pd 
+from tqdm import tqdm 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.database.database import create_db
 
+_CSV_HEADER = ['GeneID','Chrom','Start','End','Strand','Seq']
 
 def get_gene(args):
     '''
@@ -17,16 +19,23 @@ def get_gene(args):
         elements write to a file or stdout
     '''
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    gene_seq = pd.DataFrame(columns=['GeneID','Chrom','Start','End','Strand','Seq'])
+    # gene_seq = pd.DataFrame(columns=_CSV_HEADER)
+    gene_seq_list = []
     index = 0
     if not args.gene:
-        for g in db.features_of_type('gene', order_by='start'):
+        # loop all gene
+        for g in tqdm(db.features_of_type('gene', order_by='start'), \
+                      total = len(list(db.features_of_type('gene', order_by='start'))),
+                      ncols = 80, desc = "Gene Processing:"):
             seq = g.sequence(args.genome, use_strand=False)
             seq = Seq(seq)
             if g.strand == '-':
                 seq = seq.reverse_complement()
-            gene_seq.loc[index] = [g.id,g.chrom,g.start,g.end,g.strand,seq]
-            index += 1
+            # gene_seq.loc[index] = [g.id,g.chrom,g.start,g.end,g.strand,seq]
+            # index += 1
+            it = [g.id,g.chrom,g.start,g.end,g.strand,seq]
+            gene_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
+        gene_seq = pd.DataFrame.from_dict(gene_seq_list)
         gene_seq.to_csv(args.output, sep=',', index=False)
     else:
         for g in db.features_of_type('gene', order_by='start'):

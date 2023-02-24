@@ -2,8 +2,10 @@
 import sys
 import gffutils
 import pandas as pd 
+from tqdm import tqdm 
 from Bio import SeqIO
 from Bio.Seq import Seq
+from collections import deque
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.database.database import create_db
@@ -14,6 +16,7 @@ from featurExtract.utils.util import stop_codon_seq, add_stop_codon
 https://www.ncbi.nlm.nih.gov/genbank/genomes_gff/
 '''
 
+_CSV_HEADER = ['TranscriptID','Chrom','Start','End','Strand','mRNA']
 
 def plus_strand():
     pass
@@ -30,7 +33,8 @@ def get_mRNA(args):
         elements write to a file or stdout
     '''
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    mrna_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','CDS'])
+    # mrna_seq = pd.DataFrame(columns=_CSV_HEADER)
+    mrna_seq_list = deque()
     mrna_record = []
     index = 0
     # assert GTF or GFF
@@ -39,7 +43,10 @@ def get_mRNA(args):
     utr5_t = utr5_type(args.style)
     
     if not args.transcript:
-        for t in db.features_of_type(mRNA_str, order_by='start'):
+        # loop all transcript 
+        for t in tqdm(db.features_of_type(mRNA_str, order_by='start'), \
+                      total = len(list(db.features_of_type(mRNA_str, order_by='start'))), \
+                      ncols = 80, desc = "mRNA Processing:"):
             utr5, cds , utr3 = '', '', ''
             for u in db.children(t, featuretype=utr5_t, order_by='start'):
                 utr5 += u.sequence(args.genome, use_strand=False)
@@ -67,8 +74,10 @@ def get_mRNA(args):
                 seq = seq.reverse_complement()
             # csv output
             if args.output_format == 'csv':
-                mrna_seq.loc[index] = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,t.strand,seq]
-                index += 1
+                # mrna_seq.loc[index] = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,t.strand,seq]
+                # index += 1
+                it = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,t.strand,seq]
+                mrna_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
             # fasta 
             elif args.output_format == 'fasta':
                 desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
@@ -77,6 +86,7 @@ def get_mRNA(args):
                 mrnaRecord = SeqRecord(seq, id=t.id.replace('transcript:',''), description=desc)
                 mrna_record.append(mrnaRecord)
         if args.output_format == 'csv':
+            mrna_seq = pd.DataFrame.from_dict(mrna_seq_list)
             mrna_seq.to_csv(args.output, sep=',', index=False)
         elif args.output_format == 'fasta':
             SeqIO.write(mrna_record, args.output, "fasta")

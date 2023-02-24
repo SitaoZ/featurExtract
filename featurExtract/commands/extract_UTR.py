@@ -2,11 +2,19 @@
 import sys
 import gffutils
 import pandas as pd 
+from tqdm import tqdm 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.utils.util import utr3_type, utr5_type, mRNA_type
+
+
+
+_CSV_HEADER = ['TranscriptID','Chrom', \
+               'Start','End','Strand', \
+               'UTR5','UTR5_Region','UTR5_Count', \
+               'UTR3','UTR3_Region','UTR3_Count']
 
 def utr(args):
     '''
@@ -17,17 +25,18 @@ def utr(args):
     '''
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     # header
-    utr_seq = pd.DataFrame(columns=['TranscriptID','Chrom',
-                                    'Start','End','Strand',
-                                    'UTR5','UTR5_Region','UTR5_Count',
-                                    'UTR3','UTR3_Region','UTR3_Count'])
+    # utr_seq = pd.DataFrame(columns=_CSV_HEADER)
+    # dist fastest way 
+    utr_seq_list = []
     mRNA_str = mRNA_type(args.style)
     utr3_t = utr3_type(args.style)
     utr5_t = utr5_type(args.style)
     if not args.transcript:
         # all UTR in genome 
         index = 0
-        for t in db.features_of_type(mRNA_str, order_by='start'):
+        for t in tqdm(db.features_of_type(mRNA_str, order_by='start'), \
+                      total = len(list(db.features_of_type(mRNA_str, order_by='start'))), \
+                      ncols = 80, desc = "UTR Processing :"):
             seq3, seq5 = '', ''
             seq3_count, seq5_count = 0, 0
             seq3_region, seq5_region = [], []
@@ -49,10 +58,15 @@ def utr(args):
                 seq3 = seq3.reverse_complement()
                 seq5 = seq5.reverse_complement()
 
-            utr_seq.loc[index] = [t.id, t.chrom, t.start, t.end, t.strand,
-                                  seq5, '|'.join(seq5_region), seq5_count, 
-                                  seq3, '|'.join(seq3_region), seq3_count]
-            index += 1
+            # utr_seq.loc[index] = [t.id, t.chrom, t.start, t.end, t.strand,
+            #                      seq5, '|'.join(seq5_region), seq5_count, 
+            #                      seq3, '|'.join(seq3_region), seq3_count]
+            # index += 1
+            it = [t.id, t.chrom, t.start, t.end, t.strand,\
+                  seq5, '|'.join(seq5_region), seq5_count,\
+                  seq3, '|'.join(seq3_region), seq3_count]
+            utr_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
+        utr_seq = pd.DataFrame.from_dict(utr_seq_list)
         utr_seq.to_csv(args.output, sep=',', index=False)
     else:
         # return a specific transcript

@@ -2,6 +2,7 @@
 import sys
 import gffutils
 import pandas as pd 
+from tqdm import tqdm
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -47,7 +48,9 @@ def get_intron(args):
     intron_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','Exon']) # header 
     if args.transcript:
         # return a specific transcript
-        for t in db.features_of_type(mRNA_str, order_by='start'):
+        for t in tqdm(db.features_of_type(mRNA_str, order_by='start'),\
+                      total = len(list(db.features_of_type(mRNA_str, order_by='start'))), \
+                      ncols = 80, desc = "Intron Processing"):
             introns = ''
             if args.transcript in t.id:
                 exons = [] # exon position include start and end
@@ -62,7 +65,9 @@ def get_intron(args):
             SeqIO.write(introns, sys.stdout, "fasta")
     else:
         whole_introns = []
-        for t in db.features_of_type(mRNA_str, order_by='start'):
+        for t in tqdm(db.features_of_type(mRNA_str, order_by='start'), \
+                      total = len(list(db.features_of_type(mRNA_str, order_by='start'))), \
+                      ncols = 80, desc = "Intron Processing"):
             if t.id:
                 exons = [] # exon position include start and end
                 for e in db.children(t, featuretype='exon', order_by='start'):

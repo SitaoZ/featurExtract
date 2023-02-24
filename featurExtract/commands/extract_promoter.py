@@ -3,13 +3,17 @@ import sys
 import gffutils
 import pandas as pd 
 from Bio import SeqIO
+from tqdm import tqdm
 from Bio.Seq import Seq
+from collections import deque
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.database.database import genome_dict
 
 # https://pythonhosted.org/gffutils/autodocs/gffutils.Feature.html
 # 1-based coordinates
+
+_CSV_HEADER = ['GeneID','Chrom','Start','End','Strand','Promoter']
 
 def get_promoter(args):
     '''
@@ -20,11 +24,15 @@ def get_promoter(args):
     '''
     genomeDict = genome_dict(args.genome) # load fasta 
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    promoter_seq = pd.DataFrame(columns=['GeneID','Chrom','Start','End','Strand','Promoter'])
+    # promoter_seq = pd.DataFrame(columns=_CSV_HEADER)
+    promoter_seq_list = deque()
     promoter_record = []
     index = 0 
     if not args.gene:
-        for g in db.all_features(featuretype='gene', order_by="seqid"):
+        # loop all gene
+        for g in tqdm(db.all_features(featuretype='gene', order_by="seqid"), \
+                      total = len(list(db.all_features(featuretype='gene', order_by="seqid"))), \
+                      ncols = 80, desc = "Promoter Processing:"):
             if g.strand == "+":
                 gene_seq = g.sequence(args.genome, use_strand=True)
                 p_start = g.start - int(args.promoter_length) - 1 # 往前数,和terminator不同需要-1, transform 1-based to 0-based
@@ -40,9 +48,12 @@ def get_promoter(args):
             p_start_in_genome = p_start
             p_end_in_genome = p_end
             if args.output_format == 'csv':
-                promoter_seq.loc[index] = [g.id.replace('transcript:',''), g.chrom, p_start_in_genome,
-                                                                  p_end_in_genome, g.strand, promoter]
-                index += 1
+                #promoter_seq.loc[index] = [g.id.replace('transcript:',''), g.chrom, p_start_in_genome,
+                #                                                  p_end_in_genome, g.strand, promoter]
+                #index += 1
+                it = [g.id.replace('transcript:',''), g.chrom, p_start_in_genome, \
+                      p_end_in_genome, g.strand, promoter]
+                promoter_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
             # default fasta
             else:
                 desc='strand:%s start:%d end:%d length=%d'%(g.strand, p_start_in_genome,
@@ -51,6 +62,7 @@ def get_promoter(args):
                 promoter_record.append(promoterRecord)
         # csv
         if args.output_format == 'csv':
+            promoter_seq = pd.DataFrame.from_dict(promoter_seq_list)
             promoter_seq.to_csv(args.output, sep=',', index=False)
         # default fasta
         else:

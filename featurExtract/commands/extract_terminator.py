@@ -2,14 +2,18 @@
 import sys
 import gffutils
 import pandas as pd 
+from tqdm import tqdm 
 from Bio import SeqIO
 from Bio.Seq import Seq
+from collections import deque
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 from featurExtract.database.database import genome_dict
 
 # https://pythonhosted.org/gffutils/autodocs/gffutils.Feature.html
 # 1-based coordinates
+
+_CSV_HEADER = ['GeneID','Chrom','Start','End','Strand','Promoter']
 
 def get_terminator(args):
     '''
@@ -20,11 +24,14 @@ def get_terminator(args):
     '''
     genomeDict = genome_dict(args.genome) # load fasta 
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    terminator_seq = pd.DataFrame(columns=['GeneID','Chrom','Start','End','Strand','Promoter'])
+    # terminator_seq = pd.DataFrame(columns=_CSV_HEADER)
+    terminator_seq_list = deque()
     terminator_record = []
     index = 0 
     if not args.gene:
-        for g in db.all_features(featuretype='gene', order_by="seqid"):
+        for g in tqdm(db.all_features(featuretype='gene', order_by="seqid"), \
+                      total = len(list(db.all_features(featuretype='gene', order_by="seqid"))), \
+                      ncols = 80, desc ="Terminator Processing:"):
             if g.strand == "+":
                 gene_seq = g.sequence(args.genome, use_strand=True)
                 t_start = g.end - args.utr3_upper_length     # transform 1-based to 0-based
@@ -40,9 +47,12 @@ def get_terminator(args):
             t_start_in_genome = t_start
             t_end_in_genome = t_end
             if args.output_format == 'csv':
-                terminator_seq.loc[index] = [g.id.replace('transcript:',''), g.chrom, t_start_in_genome,
-                                                                  t_end_in_genome, g.strand, terminator]
-                index += 1
+                # terminator_seq.loc[index] = [g.id.replace('transcript:',''), g.chrom, t_start_in_genome,
+                #                                                  t_end_in_genome, g.strand, terminator]
+                # index += 1
+                it = [g.id.replace('transcript:',''), g.chrom, t_start_in_genome,\
+                      t_end_in_genome, g.strand, terminator]
+                terminator_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
             # default fasta
             else:
                 desc='chrom:%s strand:%s gene:%d-%d terminator:%d-%d length=%d'%(g.chrom, g.strand, 
@@ -54,11 +64,13 @@ def get_terminator(args):
                 terminator_record.append(terminatorRecord)
         # csv
         if args.output_format == 'csv':
+            terminator_seq = pd.DataFrame.from_dict(terminator_seq_list)
             terminator_seq.to_csv(args.output, sep=',', index=False)
         # default fasta
         else:
             SeqIO.write(terminator_record, args.output, "fasta")
     else:
+        terminator_seq = pd.DataFrame(columns=_CSV_HEADER)
         for g in db.all_features(featuretype='gene', order_by="seqid"):
             if args.gene in g.id:
                 if g.strand == "+":

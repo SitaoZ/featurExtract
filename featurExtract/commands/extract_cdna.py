@@ -2,6 +2,7 @@
 import sys
 import gffutils
 import pandas as pd 
+from tqdm import tqdm 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -119,6 +120,9 @@ def plus_strand():
 def minus_strand():
     pass
 
+_CSV_HEADER = ['TranscriptID', 'Chrom', 'Start_genome', \
+               'End_genome','Start_transcript', \
+               'End_transcript','Strand','CDS']
 
 def get_cdna(args):
     '''
@@ -128,13 +132,18 @@ def get_cdna(args):
         elements write to a file or stdout
     '''
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    cdna_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start_genome','End_genome','Start_transcript','End_transcript','Strand','CDS'])
+    # cdna_seq = pd.DataFrame(columns=_CSV_HEADER)
+    # dict fastest way 
+    cdna_seq_list = []
     cdna_record = []
     index = 0
     # assert GTF or GFF
     mRNA_str = mRNA_type(args.style)
     if not args.transcript:
-        for t in db.features_of_type(mRNA_str, order_by='start'):
+        # loop all cdns in genome
+        for t in tqdm(db.features_of_type(mRNA_str, order_by='start'), 
+                      total = len(list(db.features_of_type(mRNA_str, order_by='start'))),
+                      ncols = 80, desc = "cDNA Processing :"):
             #            start_codon, stop_codon = anchor_CDS(db, args.genome, t, args.style)
             start_codon_s, stop_codon_e, cds_len = anchor_CDS(db, args.genome, t, args.style)
             atg2firstexon = 0
@@ -174,9 +183,12 @@ def get_cdna(args):
             cds_end_transcript = atg2firstexon + cds_len
             # csv output
             if args.output_format == 'csv':
-                cdna_seq.loc[index] = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,
-                                       cds_start_transcript,cds_end_transcript,t.strand,seq]
-                index += 1
+                # cdna_seq.loc[index] = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,
+                #                        cds_start_transcript,cds_end_transcript,t.strand,seq]
+                # index += 1
+                it = [t.id.replace('transcript:',''),t.chrom,t.start,t.end,\
+                      cds_start_transcript,cds_end_transcript,t.strand,seq]
+                cdna_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
             # fasta output
             elif args.output_format == 'fasta':
                 desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
@@ -186,6 +198,7 @@ def get_cdna(args):
                 cdna_record.append(cdnaRecord)
         
         if args.output_format == 'csv':
+            cdna_seq = pd.DataFrame.from_dict(cdna_seq_list)
             cdna_seq.to_csv(args.output, sep=',', index=False)
         elif args.output_format == 'fasta':
             SeqIO.write(cdna_record, args.output, "fasta")
