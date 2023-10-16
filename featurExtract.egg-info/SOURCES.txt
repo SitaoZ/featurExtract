@@ -2,12 +2,14 @@ MANIFEST.in
 README.md
 setup.py
 featurExtract/__init__.py
+featurExtract/a.py
+featurExtract/b.py
+featurExtract/c.py
 featurExtract/command_gb.py
 featurExtract/command_gff.py
 featurExtract/feature_extract.py
 featurExtract/genBank_extract.py
 featurExtract/parameter.py
-featurExtract/t.py
 featurExtract/version.py
 featurExtract.egg-info/PKG-INFO
 featurExtract.egg-info/SOURCES.txt
@@ -19,7 +21,6 @@ featurExtract/commands/__init__.py
 featurExtract/commands/extract_CDS.py
 featurExtract/commands/extract_IGR.py
 featurExtract/commands/extract_UTR.py
-featurExtract/commands/extract_cdna.py
 featurExtract/commands/extract_dORF.py
 featurExtract/commands/extract_exon.py
 featurExtract/commands/extract_gene.py
@@ -29,8 +30,10 @@ featurExtract/commands/extract_promoter.py
 featurExtract/commands/extract_rRNA.py
 featurExtract/commands/extract_tRNA.py
 featurExtract/commands/extract_terminator.py
+featurExtract/commands/extract_transcript.py
 featurExtract/commands/extract_uORF.py
 featurExtract/database/database.py
 featurExtract/utils/__init__.py
 featurExtract/utils/coverage.py
 featurExtract/utils/util.py
+featurExtract/utils/visualize.py

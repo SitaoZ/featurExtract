@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: featurExtract
-Version: 0.2.5.1
+Version: 0.2.5.8
 Summary: Extract genome ferature sequence for biologists
 Home-page: https://github.com/SitaoZ/featurExtract.git
 Author: zhusitao
@@ -13,18 +13,15 @@ Description-Content-Type: text/markdown
 
 # Overview
 
-The featurExtract is python package for bioinformatics.  
-The packages contains two executable command programs.  
-The first executable program is featurExtract including  
-ten subroutines termed create, gene, promoter, UTR, uORF,  
-CDS, dORF, exon, intron, intergenic. The create subroutine is   
-used for creating database. The promoter subroutine is used  
-for extracting promoter sequence. uORF subroutine is used  
-for extracting upstream open reading frames sequence. UTR  
-subroutine is used for extracting untranslated region sequence.  
-CDS subroutine is used for extracting coding sequence.intergenic  
-subroutine is used for extracting intergenic sequence between two  
-genes. The second executable program is genBankExtract including  
+The featurExtract is a python package for genome feature extraction in bioinformatics.  
+The package contains two useful executable command programs. The first executable program 
+is featurExtract including ten subroutines termed create, gene, promoter, UTR, uORF,  CDS,
+dORF, exon, intron, intergenic. The second executable program is create that is used for 
+creating database. The promoter subroutine is used for extracting promoter sequence. The 
+uORF subroutine is used for extracting upstream open reading frames sequence. The UTR 
+subroutine is used for extracting untranslated region sequence. The CDS subroutine is used 
+for extracting coding sequence. The intergenic subroutine is used for extracting intergenic 
+sequence between two genes. The second executable program is genBankExtract including  
 four subroutines termed gene, CDS, rRNA, tRNA.
 
 

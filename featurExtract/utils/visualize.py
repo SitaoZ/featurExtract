@@ -207,6 +207,7 @@ class visual_transcript_genome(object):
         # 2D list 
         for xorf in self.xorf_location:
             # wotyout intron 
+            print('xorf:', xorf)
             if len(xorf) == 1:
                 intron_list_all.append([])
             else:

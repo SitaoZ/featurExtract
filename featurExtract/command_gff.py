@@ -17,7 +17,6 @@ def main_usage():
     sub_usage(["create    ", "create database for GTF or GFF"])
     sub_usage(["coverage  ", "read coverage by transcript models"])
     sub_usage(["CDS       ", "extract CDS for gene or genome"])
-    sub_usage(["cdna      ", "extract cdna (refMrna) sequence fo gene or genome"])
     sub_usage(["dORF      ", "extract downstream (dORF) for gene or genome"])
     sub_usage(["exon      ", "extract exon for transcript"])
     sub_usage(["gene      ", "extract gene sequence fo gene or genome"])
@@ -26,6 +25,7 @@ def main_usage():
     sub_usage(["mRNA      ", "extract mature messager RNA for transcript"])
     sub_usage(["promoter  ", "extract promoter for gene or genome"])
     sub_usage(["terminator", "extract terminator for gene or genome"])
+    sub_usage(["transcript", "extract transcript (refMrna) sequence fo gene or genome"])
     sub_usage(["uORF      ", "extract upstream ORF (uORF) for gene or genome"])
     sub_usage(["UTR       ", "extract untranslated region (UTR) for gene or genome"])
     
@@ -36,7 +36,7 @@ def main():
     if len(sys.argv) == 1:
         main_usage()
     elif len(sys.argv) >= 2:
-        if sys.argv[1] in ['create','gene','mRNA','cdna','IGR','promoter','terminator','UTR','uORF','CDS','dORF','exon','intron']:
+        if sys.argv[1] in ['create','gene','mRNA','transcript','IGR','promoter','terminator','UTR','uORF','CDS','dORF','exon','intron']:
             # import 就执行feature_extract()
             # 安装后，系统存在featurExtract包
             from featurExtract import feature_extract

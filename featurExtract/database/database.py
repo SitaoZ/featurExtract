@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os 
 from Bio import SeqIO
+from pyfaidx import Fasta
 
 def genome_dict(genome_fasta_path):
     '''
@@ -9,9 +10,7 @@ def genome_dict(genome_fasta_path):
     return:
      genome fasta dict
     '''
-    genome = dict()
-    for record in SeqIO.parse(genome_fasta_path, 'fasta'):
-        genome[record.id] = record.seq
+    genome = Fasta(genome_fasta_path)
     return genome
 
 def create_db(genbank_path):

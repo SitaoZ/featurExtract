@@ -5,10 +5,12 @@ import pandas as pd
 from tqdm import tqdm 
 from Bio import SeqIO
 from Bio.Seq import Seq
+from multiprocessing import Pool
 from Bio.SeqRecord import SeqRecord
-from collections import defaultdict
+from collections import defaultdict, deque
+from concurrent.futures import ProcessPoolExecutor
 from featurExtract.utils.util import utr3_type, utr5_type, mRNA_type
-from featurExtract.utils.util import stop_codon_seq, add_stop_codon
+from featurExtract.utils.util import stop_codon_seq, add_stop_codon, parse_output
 from featurExtract.utils.visualize import visual_transcript, visual_transcript_genome
 
 # table header 
@@ -109,6 +111,7 @@ class GFF(object):
 
 class uORF_genome_location(object):
     """A parse for uORF location from transcript map to genome 
+    designed for GFF output format 
     uORF的起始和终止只会位于某一外显子中,锁定外显子后根据相对位置判定真实坐标,
     其中uORF的起始等于它位于的外显子的起始位置+该位置离该exon起始的距离,
     uORF的终止等于它位于的外显子的起始位置+该位置离该exon起始的距离.
@@ -261,7 +264,8 @@ class uORF(object):
         
     def uorf_parse(self):
         """uorf finder main program, return a dict"""
-        uORF_dict = defaultdict(list)
+        # uORF_dict = defaultdict(list)
+        uORF_dict = defaultdict()
         # start_codon_position means the first base position in matural_transcript
         if self.cds not in self.mt:
             return uORF_dict
@@ -289,7 +293,7 @@ class uORF(object):
                         out1 = [self.transcript_id, self.chrom, self.strand, \
                                 cds_interval, i+1, j+3, 'type1', len(type1_uORF), type1_uORF]
                         if not uORF_dict.get('type1_uORF'):
-                            uORF_dict['type1_uORF'] = [out1]
+                            uORF_dict['type1_uORF'] = deque([out1])
                         else:
                             uORF_dict['type1_uORF'].append(out1)
                         # only use the first stop codon, so break must
@@ -300,7 +304,7 @@ class uORF(object):
                         out2 = [self.transcript_id, self.chrom, self.strand, \
                                 cds_interval, i+1, j+3, 'type2', len(type2_uORF), type2_uORF]
                         if not uORF_dict.get('type2_uORF'):
-                            uORF_dict['type2_uORF'] = [out2]
+                            uORF_dict['type2_uORF'] = deque([out2])
                         else:
                             uORF_dict['type2_uORF'].append(out2)
                         break
@@ -310,7 +314,7 @@ class uORF(object):
                         out3 = [self.transcript_id, self.chrom, self.strand, \
                                 cds_interval, i+1, j+3, 'type3', len(type3_uORF), type3_uORF]
                         if not uORF_dict.get('type3_uORF'):
-                            uORF_dict['type3_uORF'] = [out3]
+                            uORF_dict['type3_uORF'] = deque([out3])
                         else:
                             uORF_dict['type3_uORF'].append(out3)
                         break
@@ -378,10 +382,104 @@ def uorf_procedure_oriented(transcript_id, chrom, strand, matural_transcript, co
     return uORF_dict
 
 
+def get_mt_cds_seq(t, db, genome, style):
+    """
+    parameters:
+        args:  
+    """
+    # primary transcript (pt) 是基因组上的转录本的序列，
+    # 有的会包括intron，所以提取的序列和matural transcript (mt) 不一致
+    # pt = t.sequence(genome, use_strand=True)
+    # matural transcript (mt)
+    # 该步骤是获取序列: 转录本序列，CDS序列, five_prime_UTR, three_prime_UTR
+    # 但是有的基因注释不正确，导致成熟转录本序列的两个来源不一致，一个是exon来源的，一个是five_prime_UTR和CDS来源的
+    # 针对这种请情况，我们使用 five_prime_UTR + CDS + three_prime_UTR 拼接形成成熟的转录本序列用于uORF的注释
+    # exon 提取的是转录本内成熟的mRNA的序列,即外显子按基因组坐标首尾相连的matural transcript
+    mt, cds = '', ''
+    exons_list = []
+    for e in db.children(t, featuretype='exon', order_by='start'):
+        exons_list.append((e.start, e.end))
+        mt += e.sequence(genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
+    mt = Seq(mt)
+    if t.strand == '-':
+        mt = mt.reverse_complement()
+    # CDS 提取的是编码区 ATG ... TAG
+    cds_list = []
+    for c in db.children(t, featuretype='CDS', order_by='start'):
+        cds_list.append((c.start, c.end))
+        cds += c.sequence(genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
+    if style == 'GTF':
+        sc_seq = stop_codon_seq(db, t, genome)
+        cds = add_stop_codon(cds, t.strand, sc_seq)
+    cds = Seq(cds)
+    ## 需要确定exon和mRNA的位置是否一致，不一致以mRNA为准
+    # mt from utr5/3 and cds
+    mt_from_utr_cds = ''
+    for e in db.children(t, featuretype=['five_prime_UTR', 'CDS', 'three_prime_UTR'], order_by='start'):
+        mt_from_utr_cds += e.sequence(genome, use_strand=False)
+    mt_from_utr_cds = Seq(mt_from_utr_cds)
+    if t.strand == '-':
+        mt_from_utr_cds = mt_from_utr_cds.reverse_complement()
+    if mt != mt_from_utr_cds:
+        mt = mt_from_utr_cds
+        # error_count += 1
+    if t.strand == '-':
+        cds = cds.reverse_complement()
+    return mt, cds, exons_list, cds_list
+    
+def uorf_filter_output(params):
+    t, database, genome, style, length, output_format = params
+    db = gffutils.FeatureDB(database, keep_order=True)
+    index = 0 
+    uORF_seq_list = deque()
+    # 可以多进程,但是多进程会导致和SQLite数据库的交互产生错误
+    mt, cds, exons_list, cds_list = get_mt_cds_seq(t, db, genome, style)
+    # objected-oriented
+    if mt == cds: # not contain uORF
+        return 
+    if len(cds) % 3 != 0: # CDS error
+        return 
+    uORF_ = uORF(t.id, t.chrom, t.strand, mt, cds)
+    uORF_dict = uORF_.uorf_parse()
+    if len(uORF_dict) == 0: # CDS error
+        return 
+    # loop for type1, type2 and type3
+    for key in sorted(uORF_dict.keys()):
+        # print(key,len(uORF_dict[key]))
+        for it in uORF_dict[key]:
+            # uORF length filter 
+            if len(it[8]) <= length:
+                # default: 6
+                continue
+            # csv output format 
+            if output_format == 'fasta':
+                uorf_id = ".".join(map(str,[it[0], it[4], it[5], it[6]]))
+                seq = it[8] # it[8] is s Seq type
+                desc='strand:%s uORF=%d-%d %s length=%d CDS=%s-%s'%(it[2],
+                                                              it[4],
+                                                              it[5],
+                                                              it[6],
+                                                              len(seq),
+                                                              it[3].split('-')[0],
+                                                              it[3].split('-')[1])
+                uorfRecord = SeqRecord(seq, id=uorf_id.replace('transcript:',''), description=desc)
+                uORF_seq_list.append(uorfRecord)
 
-_uORF_csv_header = ['TranscriptID', 'Chrom', 'Strand',
-                    'CDS Interval', 'uORF Start', 'uORF End',
-                    'uORF Type', 'uORF Length', 'uORF']
+            elif output_format == 'gff':
+                gff = GFF(exons_list, it, 'uORF')
+                uorf_gff_line,features_gff_lines = gff.parse()
+                # print(uorf_gff_line)
+                # uORF_gff.write(uorf_gff_line+"\n")
+                uORF_seq_list.append(uorf_gff_line)
+                for feature_line in features_gff_lines:
+                    # print(feature_line)
+                    uORF_seq_list.append(feature_line)
+                    # uORF_gff.write(feature_line+"\n")
+            else:
+                # csv output_format
+                uORF_seq_list.append(dict(zip(_uORF_csv_header, it)))
+                index += 1
+    return uORF_seq_list
 
 def get_uorf(args):
     """ Get uORF main command line entry
@@ -391,109 +489,30 @@ def get_uorf(args):
         elements write to a file or stdout
     """
     db = gffutils.FeatureDB(args.database, keep_order=True)
+    feature_types = db.featuretypes()
     # csv
     # uORF_seq = pd.DataFrame(columns=_uORF_csv_header)
-    uORF_seq_list = []
-    # gff
-    uORF_gff = open(args.output,'w')
+    # uORF_seq_list = []
+    # uORF_seq_list = deque()
     # fasta
-    uorf_record = []
-    index = 0
-    mRNA_str = mRNA_type(args.style) 
+    uorf_record = deque()
+    # gff 
+    uorf_gff_record = deque()
+    # index = 0
+    if args.rna_feature == 'mRNA':
+        mRNA_str = mRNA_type(args.style)
+    else:
+        mRNA_str = tuple(x for x in list(feature_types) if 'RNA' in x or 'transcript' in x)
     error_count = 0
+    total_transcript_number = len(list(db.features_of_type(mRNA_str, order_by='start')))
     # loop all transcripts in genome
     if not args.transcript:
-        for t in tqdm(db.features_of_type(mRNA_str, order_by='start'), \
-                      total = len(list(db.features_of_type(mRNA_str, order_by='start'))), \
-                      ncols = 80, desc = "uORF Processing :"):
-            # primary transcript (pt) 是基因组上的转录本的序列，
-            # 有的会包括intron，所以提取的序列和matural transcript 不一致
-            # print(t)
-            pt = t.sequence(args.genome, use_strand=True)
-            # matural transcript (mt)
-            # exon 提取的是转录本内成熟的MRNA的序列,即外显子收尾相连的matural transcript
-            mt = ''
-            exons_list = []
-            for e in db.children(t, featuretype='exon', order_by='start'):
-                exons_list.append([e.start, e.end])
-                s = e.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
-                mt += s
-            mt = Seq(mt)
-            if t.strand == '-':
-                mt = mt.reverse_complement()
-            # CDS 提取的是编码区 ATG ... TAG
-            cds = ''
-            for c in db.children(t, featuretype='CDS', order_by='start'):
-                s = c.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
-                cds += s
-            if args.style == 'GTF':
-                sc_seq = stop_codon_seq(db, t, args.genome)
-                cds = add_stop_codon(cds, t.strand, sc_seq)
-            cds = Seq(cds)
-            ## 需要确定exon和mRNA的位置是否一致，不一致以mRNA为准
-            # mt from utr5/3 and cds
-            mt_from_utr_cds = ''
-            for e in db.children(t, featuretype=['five_prime_UTR','CDS', 'three_prime_UTR'], order_by='start'):
-                mt_from_utr_cds += e.sequence(args.genome, use_strand=False)
-            mt_from_utr_cds = Seq(mt_from_utr_cds)
-            if t.strand == '-':
-                mt_from_utr_cds = mt_from_utr_cds.reverse_complement()
-            if mt != mt_from_utr_cds:
-                mt = mt_from_utr_cds
-                error_count += 1
-            if t.strand == '-':
-                cds = cds.reverse_complement()
-            # procedure-oriented
-            # uORF_dict = uorf_procedure_oriented(t.id, t.chrom, t.strand, mt, cds)
-            # objected-oriented
-            if mt == cds: # not contain uORF
-                continue
-            if len(cds) % 3 != 0: # CDS error
-                continue
-            uORF_ = uORF(t.id, t.chrom, t.strand, mt, cds)
-            uORF_dict = uORF_.uorf_parse()
-            if len(uORF_dict) == 0: # CDS error
-                continue
-            # loop for type1, type2 and type3
-            for key in sorted(uORF_dict.keys()):
-                # print(key,len(uORF_dict[key]))
-                for it in uORF_dict[key]:
-                    # csv output format 
-                    if args.output_format == 'csv':
-                        # uORF_seq.loc[index] = it
-                        # dict 
-                        uORF_seq_list.append(dict((_uORF_csv_header[i],it[i]) for i in range(len(_uORF_csv_header))))
-                        index += 1
-                    elif args.output_format == 'fasta':
-                        uorf_id = ".".join(map(str,[it[0], it[4], it[5], it[6]]))
-                        seq = it[8] # it[8] is s Seq type
-                        desc='strand:%s uORF=%d-%d %s length=%d CDS=%s-%s'%(it[2],
-                                                                      it[4],
-                                                                      it[5],
-                                                                      it[6],
-                                                                      len(seq),
-                                                                      it[3].split('-')[0],
-                                                                      it[3].split('-')[1])
-                        uorfRecord = SeqRecord(seq, id=uorf_id.replace('transcript:',''), description=desc)
-                        uorf_record.append(uorfRecord)
-                        
-                    elif args.output_format == 'gff':
-                        gff = GFF(exons_list, it, 'uORF')
-                        uorf_gff_line,features_gff_lines = gff.parse() 
-                        # print(uorf_gff_line)
-                        uORF_gff.write(uorf_gff_line+"\n") 
-                        for feature_line in features_gff_lines:
-                            # print(feature_line)
-                            uORF_gff.write(feature_line+"\n")
+        param_list = [(t, args.database, args.genome, args.style, args.length, args.output_format) for t in db.features_of_type(mRNA_str, order_by='start')]
+        with Pool(processes=args.process) as p:
+            uORF_seq_list = list(tqdm(p.imap(uorf_filter_output, param_list), total=len(param_list), ncols = 80, desc='uORF Processing:'))
+        uORF_seq_list = [d for de in uORF_seq_list if de != None for d in de]
         # output file 
-        if args.output_format == 'csv':
-            uORF_seq = pd.DataFrame.from_dict(uORF_seq_list)
-            uORF_seq.to_csv(args.output, sep=',', index=False)
-        elif args.output_format == 'gff':
-            uORF_gff.close()
-        elif args.output_format == 'fasta':
-            with open(args.output,'w') as handle:
-                SeqIO.write(uorf_record, handle, "fasta")
+        parse_output(args, uORF_seq_list)
     else:
         # specify the transcript id; only one transcript
         for t in db.features_of_type(mRNA_str, order_by='start'):
@@ -501,101 +520,25 @@ def get_uorf(args):
             # 有的会包括intron，所以提取的序列和matural transcript 不一致
             # id specify
             if args.transcript in t.id:
-                pt = t.sequence(args.genome, use_strand=True)
-                # matural transcript (mt)
-                # exon 提取的是转录本内成熟的MRNA的序列,即外显子收尾相连的matural transcript
-                mt = ''
-                exons_list = []
-                for e in db.children(t, featuretype='exon', order_by='start'):
-                    exons_list.append([e.start, e.end]) # 1 based location 
-                    s = e.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
-                    mt += s
-                mt = Seq(mt)
-                mt_len = len(mt)
-                if t.strand == '-':
-                    mt = mt.reverse_complement()
-                # intron for uORF locate position 
-                for i in db.children(t, featuretype='intron', order_by='start'):
-                    pass
-                # CDS 提取的是编码区 ATG ... TAG
-                cds = ''
-                cds_list = []
-                for c in db.children(t, featuretype='CDS', order_by='start'):
-                    cds_list.append([c.start, c.end])
-                    s = c.sequence(args.genome, use_strand=False) # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
-                    # print('cds len i:', len(c))
-                    cds += s
-                if args.style == 'GTF':
-                    sc_seq = stop_codon_seq(db, t, args.genome)
-                    cds = add_stop_codon(cds, t.strand, sc_seq)
-                cds = Seq(cds)
-                ## 需要确定exon和mRNA的位置是否一致，不一致以mRNA为准
-                # mt from utr5/3 and cds
-                mt_from_utr_cds = ''
-                for e in db.children(t, featuretype=['five_prime_UTR','CDS', 'three_prime_UTR'], order_by='start'):
-                    mt_from_utr_cds += e.sequence(args.genome, use_strand=False)
-                mt_from_utr_cds = Seq(mt_from_utr_cds)
-                if t.strand == '-':
-                    mt_from_utr_cds = mt_from_utr_cds.reverse_complement()
-                if mt != mt_from_utr_cds:
-                    mt = mt_from_utr_cds
-                    error_count += 1
-                cds_len = len(cds)
-                if t.strand == '-':
-                    cds = cds.reverse_complement()
-                # procedure-oriented 
-                # uORF_dict = uorf_procedure_oriented(t.id, t.chrom, t.strand, mt, cds)
-                # objected-oriented
-                if mt == cds:  # not contain uORF
-                    continue
-                if len(cds) % 3 != 0: # CDS error
-                    continue
+                params = (t, args.database, args.genome, args.style, args.length, args.output_format)
+                uORF_seq_list = uorf_filter_output(params)
+                mt, cds, exons_list, cds_list = get_mt_cds_seq(t, db, args.genome, args.style)
                 uORF_ = uORF(t.id, t.chrom, t.strand, mt, cds)
+                # figure the schametic 
                 uORF_dict = uORF_.uorf_parse()
-                if len(uORF_dict) == 0:  # CDS error
-                    continue
                 uorf_location_genome = [] # for schematic on genome # 3D list 
                 for key in sorted(uORF_dict.keys()):
-                    # print(key,len(uORF_dict[key]))
                     for it in uORF_dict[key]:
-                        # csv output format 
-                        if args.output_format == 'csv':
-                            # uORF_seq.loc[index] = it
-                            # dict is fastest way 
-                            uORF_seq_list.append(dict((_uORF_csv_header[i],it[i]) for i in range(len(_uORF_csv_header))))
-                            index += 1
-                            # for schematic on genome
-                            gff = GFF(exons_list, it, 'uORF')
-                            ex_locations = gff.uorf_exons_location()
-                            uorf_location_genome.append(ex_locations)
-                        elif args.output_format == 'fasta':
-                            uorf_id = ".".join(map(str,[it[0], it[4], it[5], it[6]]))
-                            seq = it[8] # it[8] is a Seq type
-                            desc='strand:%s uORF=%d-%d %s length=%d CDS=%s-%s'%(it[2],
-                                                                        it[4],
-                                                                        it[5],
-                                                                        it[6],
-                                                                        len(seq),
-                                                                        it[3].split('-')[0],
-                                                                        it[3].split('-')[1])
-                            uorfRecord = SeqRecord(seq, id=uorf_id.replace('transcript:',''), description=desc)
-                            uorf_record.append(uorfRecord)
-                            # for schematic on genome
-                            gff = GFF(exons_list, it, 'uORF')
-                            ex_locations = gff.uorf_exons_location()
-                            uorf_location_genome.append(ex_locations) 
-                        elif args.output_format == 'gff':
-                            # for schematic on genome
-                            gff = GFF(exons_list, it, 'uORF')
-                            uorf_gff_line,features_gff_lines = gff.parse()
-                            ex_locations = gff.uorf_exons_location()
-                            uorf_location_genome.append(ex_locations) # for schematic on genome
-                            uORF_gff.write(uorf_gff_line+"\n")
-                            for feature_line in features_gff_lines:
-                                uORF_gff.write(feature_line+"\n")
-                # figure the schametic 
+                        # uORF length filter 
+                        if len(it[8]) <= args.length:
+                            # default: 6
+                            continue
+                        # for schematic on genome
+                        gff = GFF(exons_list, it, 'uORF')
+                        ex_locations = gff.uorf_exons_location()
+                        uorf_location_genome.append(ex_locations)
                 # without intron 
-                if args.schematic_without_intron:
+                if args.schematic_without_intron == True:
                     figure = visual_transcript(args.schematic_without_intron, 
                                                args.transcript, 
                                                uORF_.transcript_location(),
@@ -604,7 +547,7 @@ def get_uorf(args):
                                                'uORF')
                     figure.draw()
                 # with intron
-                if args.schematic_with_intron:
+                if args.schematic_with_intron == True:
                     figure = visual_transcript_genome(t.strand, 
                                                       args.schematic_with_intron, 
                                                       args.transcript, 
@@ -614,12 +557,5 @@ def get_uorf(args):
                                                       'uORF')
                     figure.draw() 
                 # file out
-                if args.output_format == 'csv':
-                    uORF_seq = pd.DataFrame.from_dict(uORF_seq_list)
-                    uORF_seq.to_csv(args.output, sep=',', index=False)
-                elif args.output_format == 'gff':
-                    uORF_gff.close()
-                elif args.output_format == 'fasta':
-                    with open(args.output,'w') as handle:
-                        SeqIO.write(uorf_record, handle, "fasta")
-                break 
+                parse_output(args, uORF_seq_list)
+                break

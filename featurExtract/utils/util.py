@@ -1,4 +1,7 @@
 import sys
+import pandas as pd 
+from Bio import SeqIO
+from io import StringIO
 
 def stop_codon_seq(db, transcript, genome):
     s = ''
@@ -87,3 +90,40 @@ def seq_upper_lower(seq,start,end):
     coding = seq[start:end].upper()
     utr3 = seq[end:].lower()
     return utr5+coding+utr3
+
+def parse_output(args, seq_list):
+    """
+    function for output
+    parameters:
+        args: a class for argparse
+        seq_list: Promoter/gene/transcript/exon/intron/cds/utr/uORF/dORF/CDS seq_list
+    return: none
+    """
+    if args.print:
+        if args.output_format == 'csv':
+            cds_seq = pd.DataFrame.from_dict(seq_list)
+            cds_stream = StringIO()
+            cds_seq.to_csv(cds_stream, sep=',', index=False)
+            print(cds_stream.getvalue(), file=sys.stdout, end="")
+        elif args.output_format == 'fasta':
+            SeqIO.write(seq_list, sys.stdout, "fasta")
+        elif args.output_format == 'gff':
+            for record in seq_list:
+                print(record, file=sys.stdout)
+        else:
+            sys.exit('output(-o) format not be specified {csv, fasta, gff}.')
+    elif args.output != None:
+        if args.output_format == 'csv':
+            cds_seq = pd.DataFrame.from_dict(seq_list)
+            cds_seq.to_csv(args.output, sep=',', index=False)
+        elif args.output_format == 'fasta':
+            with open(args.output, 'w') as handle:
+                SeqIO.write(seq_list, handle, "fasta")
+        elif args.output_format == 'gff':
+            with open(args.output, 'w') as handle:
+                for record in seq_list:
+                    handle.write(str(record)+'\n')
+        else:
+            sys.exit('output(-o) format not be specified {csv, fasta, gff}.')
+    else:
+        sys.exit('-o or -v should be specified')

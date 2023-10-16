@@ -6,10 +6,12 @@ import pandas as pd
 from tqdm import tqdm
 from Bio import SeqIO
 from Bio.Seq import Seq
+from io import StringIO
+from multiprocessing import Pool
 from Bio.SeqRecord import SeqRecord
-from collections import defaultdict
+from collections import defaultdict, deque
 from featurExtract.database.database import create_db
-from featurExtract.utils.util import add_stop_codon,mRNA_type
+from featurExtract.utils.util import add_stop_codon, mRNA_type, parse_output
 
 '''
 https://www.ncbi.nlm.nih.gov/genbank/genomes_gff/
@@ -23,6 +25,49 @@ def stop_codon(db, transcript, genome):
 
 _CSV_HEADER = ['TranscriptID','Chrom','Start','End','Strand','CDS']
 
+def sub_cds(params):
+    t, database, genome, style, output_format = params
+    db = gffutils.FeatureDB(database, keep_order=True)
+    cds_seq_list = deque()
+    seq = ''
+    cds_start_transcript = 0
+    cds_end_transcript = 0
+    cds_gff_lines = deque()
+    for c in db.children(t, featuretype='CDS', order_by='start'):
+        cds_gff_lines.append(c)
+        # 不反向互补，对于负链要得到全部的cds后再一次性反向>互补
+        s = c.sequence(genome, use_strand=False)
+        seq += s
+        if not cds_start_transcript :
+            cds_start_transcript = c.start - t.start
+        cds_end_transcript += len(s)
+    cds_end_transcript = cds_end_transcript + cds_start_transcript
+    
+    if style == 'GTF':
+        stop_codon_seq = stop_codon(db, t, genome)
+        seq = add_stop_codon(seq, t.strand, stop_codon_seq)
+    seq = Seq(seq)
+    if t.strand == '-':
+        seq = seq.reverse_complement()
+    # csv output
+    if output_format == 'gff':
+        for line in cds_gff_lines:
+            cds_seq_list.append(line)
+    # defalut fasta
+    elif output_format == 'fasta':
+        desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,
+                                                              t.start,
+                                                              t.end,
+                                                              len(seq),
+                                                              cds_start_transcript,
+                                                              cds_end_transcript)
+        cdsRecord = SeqRecord(seq, id=t.id.replace('transcript:',''), description=desc)
+        cds_seq_list.append(cdsRecord)
+    else:
+        it = [t.id,t.chrom,t.start,t.end,t.strand,seq]
+        cds_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
+    return cds_seq_list
+
 def get_cds(args):
     '''
     parameters:
@@ -32,87 +77,26 @@ def get_cds(args):
     '''
     # print(args)
     db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    # dict
-    cds_seq_list = []
-    # cds_seq = pd.DataFrame(columns=['TranscriptID','Chrom','Start','End','Strand','CDS'])
-    cds_record = []
-    index = 0
+    feature_types = db.featuretypes()
     # assert GTF or GFF
-    mRNA_str = mRNA_type(args.style)
+    if args.rna_feature == 'mRNA':
+        mRNA_str = mRNA_type(args.style)
+    else:
+        mRNA_str = tuple(x for x in list(feature_types) if 'RNA' in x or 'transcript' in x)
     # loop all transcript in genome
     if not args.transcript:
-        for t in tqdm(db.features_of_type(mRNA_str, order_by='start'), \
-                                   total = len(list(db.features_of_type(mRNA_str, order_by='start'))),\
-                                   ncols = 80, desc="CDS Processing :"):
-            seq = ''
-            cds_start_transcript = 0
-            cds_end_transcript = 0
-            for c in db.children(t, featuretype='CDS', order_by='start'):
-                # 不反向互补，对于负链要得到全部的cds后再一次性反向>互补
-                s = c.sequence(args.genome, use_strand=False)
-                seq += s
-                if not cds_start_transcript :
-                    cds_start_transcript = c.start - t.start
-                cds_end_transcript += len(s)
-            cds_end_transcript = cds_end_transcript + cds_start_transcript
-            
-            if args.style == 'GTF':
-                stop_codon_seq = stop_codon(db, t, args.genome)
-                seq = add_stop_codon(seq, t.strand, stop_codon_seq)
-            seq = Seq(seq)
-            if t.strand == '-':
-                seq = seq.reverse_complement()
-            # csv output
-            if args.output_format == 'csv':
-                # dict 
-                # cds_seq.loc[index] = [t.id,t.chrom,t.start,t.end,t.strand,seq]
-                # index += 1
-                it = [t.id,t.chrom,t.start,t.end,t.strand,seq]
-                cds_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
-            # defalut fasta
-            else:
-                desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,
-                                                                      t.start,
-                                                                      t.end,
-                                                                      len(seq),
-                                                                      cds_start_transcript,
-                                                                      cds_end_transcript)
-                cdsRecord = SeqRecord(seq, id=t.id.replace('transcript:',''), description=desc)
-                cds_record.append(cdsRecord)
-            # break 
-        # csv
-        if args.output_format == 'csv':
-            cds_seq = pd.DataFrame.from_dict(cds_seq_list)
-            cds_seq.to_csv(args.output, sep=',', index=False)
-        # default fasta
-        elif args.output_format == 'fasta': 
-            with open(args.output,'w') as handle:
-                SeqIO.write(cds_record, handle, "fasta") 
-        else:
-            sys.exit('output format not be specified')
+        param_list = [(t, args.database, args.genome, args.style, args.output_format) for t in db.features_of_type(mRNA_str, order_by='start')]
+        with Pool(processes=args.process) as p:
+            cds_seq_list = list(tqdm(p.imap(sub_cds, param_list), total=len(param_list), ncols = 80, desc='CDS Processing:'))
+        cds_seq_list = [d for de in cds_seq_list if de != None for d in de]
+        parse_output(args, cds_seq_list)
     else:
         # only one transcript
         for t in db.features_of_type(mRNA_str, order_by='start'):
             if args.transcript in t.id:
-                seq = ''
-                for c in db.children(t, featuretype='CDS', order_by='start'):
-                    # 不反向互补，对于负链要得到全部的cds后再一次性>反向互补
-                    s = c.sequence(args.genome, use_strand=False)
-                    seq += s
-                if args.style == 'GTF':
-                    stop_codon_seq = stop_codon(db, t, args.genome)
-                    seq = add_stop_codon(seq, t.strand, stop_codon_seq)
-                seq = Seq(seq)
-                if t.strand == '-':
-                    seq= seq.reverse_complement()
-                # cds_seq.loc[index] = [t.id,t.chrom,t.start,t.end,t.strand,seq]
-                # index += 1
-                desc='strand %s start %d end %d length=%d'%(t.strand,t.start,t.end,len(seq))
-                cdsRecord = SeqRecord(seq, id=t.id, description=desc)
-                if args.print:
-                    SeqIO.write([cdsRecord], sys.stdout, "fasta") 
-                else:
-                    SeqIO.write([cdsRecord], args.output, "fasta") 
+                param = (t, args.database, args.genome, args.style, args.output_format)
+                cds_seq_list = sub_cds(param) 
+                parse_output(args, cds_seq_list)
                 break 
 
 
