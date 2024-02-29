@@ -33,10 +33,71 @@ and GenBankExtract is suited for GenBank file.
 #### featurExtract
 
 ```bash
-# gff or gtf database 
-which featurExtract
-featurExtract -h 
-featurExtract create -h 
+# gff or gtf database
+
+featurExtract -h
+
+Program:  featurExtract (tools for genomic feature extract)
+Version:  0.2.6.0
+Contact:  Sitao Zhu <zhusitao1990@163.com>
+Usage  :  featurExtract <command> [parameters] 
+Command: 
+          create        create GFF/GTF database
+          stat          database statistics
+          cds           extract CDS sequence
+          dorf          extract dORF sequence
+          exon          extract exon sequence
+          gene          extract gene sequence
+          intron        extract intron sequence
+          igr           extract intergenic region
+          mrna          extract mRNA sequence
+          promoter      extract promoter sequence
+          terminator    extract terminator sequence
+          transcript    extract transcript sequence
+          uorf          extract uORF sequence
+          utr           extract 5/3UTR sequence
+```
+
+-create
+
+```bash
+featurExtract create -h
+
+usage: featurExtract create [-h] -g GENOMEFEATURE -o OUTPUT -p PREFIX
+                            [-s {gff,gtf}]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -g GENOMEFEATURE, --genomefeature GENOMEFEATURE
+                        genome annotation file, gff or gtf
+  -o OUTPUT, --output OUTPUT
+                        database output dir path
+  -p PREFIX, --prefix PREFIX
+                        database prefix
+  -s {gff,gtf}, --style {gff,gtf}
+                        genome annotation file format
+```
+
+-stat
+```bash
+featurExtract stat -h
+
+usage: featurExtract stat [-h] -d DATABASE -g GENOME -o OUTPUT [-s {gff,gtf}]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DATABASE, --database DATABASE
+                        database created from creat command
+  -g GENOME, --genome GENOME
+                        genome fasta path
+  -o OUTPUT, --output OUTPUT
+                        stat output
+  -s {gff,gtf}, --style {gff,gtf}
+                        genome annotation file format
+```
+
+
+```
 featurExtract promoter -h 
 featurExtract UTR -h 
 featurExtract uORF -h 
