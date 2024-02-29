@@ -7,7 +7,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
-from featurExtract.database.database import create_db
+from featurExtract.database.database import create_db, genome_dict
+from featurExtract.utils.util import parse_output, gff_feature_dict, gtf_feature_dict
 
 _CSV_HEADER = ['GeneID','Chrom','Start','End','Strand','Seq']
 
@@ -18,41 +19,60 @@ def get_gene(args):
     return:
         elements write to a file or stdout
     '''
-    db = gffutils.FeatureDB(args.database, keep_order=True) # load database
+    # db = gffutils.FeatureDB(args.database, keep_order=True) # load database
     # gene_seq = pd.DataFrame(columns=_CSV_HEADER)
+    if args.style == 'GFF':
+        db, t2g = gff_feature_dict(args.database, args.style)
+    else:
+        db, t2g = gtf_feature_dict(args.database, args.style)
+    genome = genome_dict(args.genome)
     gene_seq_list = []
     index = 0
     if not args.gene:
-        # loop all gene
-        for g in tqdm(db.features_of_type('gene', order_by='start'), \
-                      total = len(list(db.features_of_type('gene', order_by='start'))),
-                      ncols = 80, desc = "Gene Processing:"):
-            seq = g.sequence(args.genome, use_strand=False)
+        for g in tqdm(db, ncols=80, total=len(db), desc = 'Gene processing:'):
+            gene = db[g]['gene']
+            if isinstance(gene, dict):
+                print(gene, g)
+            chrom, start, end, strand = gene.chr, gene.start, gene.end, gene.strand
+            seq = str(genome[chrom][start-1:end])
             seq = Seq(seq)
-            if g.strand == '-':
+            if gene.strand == '-':
                 seq = seq.reverse_complement()
-            # gene_seq.loc[index] = [g.id,g.chrom,g.start,g.end,g.strand,seq]
-            # index += 1
-            it = [g.id,g.chrom,g.start,g.end,g.strand,seq]
-            gene_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
-        gene_seq = pd.DataFrame.from_dict(gene_seq_list)
-        gene_seq.to_csv(args.output, sep=',', index=False)
+            it = [g, gene.chr, gene.start, gene.end, gene.strand, seq]
+            if args.output_format == 'gff':
+                gene_seq_list.append('\t'.join(it))
+            elif args.output_format == 'fasta':
+                # fasta (defalut)
+                desc='strand:%s start:%d end:%d length=%d'%(gene.strand,
+                                                              gene.start,
+                                                              gene.end,
+                                                              len(seq))
+                geneRecord = SeqRecord(seq, id=g, description=desc)
+                gene_seq_list.append(geneRecord)
+            else:
+                gene_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
+        parse_output(args, gene_seq_list)
     else:
-        for g in db.features_of_type('gene', order_by='start'):
-            if args.gene in g.id:
-                seq = g.sequence(args.genome, use_strand=False)
-                seq = Seq(seq)
-                if g.strand == '-':
-                    seq = seq.reverse_complement()
-                geneRecord = SeqRecord(seq, id=g.id, 
-                             description='strand %s start %d end %d length=%d'%(
-                                          g.strand, g.start, g.end, len(seq))
-                                      )
-                if args.print:
-                    SeqIO.write([geneRecord], sys.stdout, "fasta") 
-                else:
-                    SeqIO.write([geneRecord], args.output, "fasta") 
-                break 
+        gene = db[args.gene]['gene']
+        chrom, start, end, strand = gene.chr, gene.start, gene.end, gene.strand
+        seq = str(genome[chrom][start-1:end])
+        seq = Seq(seq)
+        if gene.strand == '-':
+            seq = seq.reverse_complement()
+        it = [args.gene, gene.chr, gene.start, gene.end, gene.strand, seq]
+        if args.output_format == 'gff':
+            gene_seq_list.append('\t'.join(it))
+        elif args.output_format == 'fasta':
+            # fasta (defalut)
+            desc='strand:%s start:%d end:%d length=%d'%(gene.strand,
+                                                          gene.start,
+                                                          gene.end,
+                                                          len(seq))
+            geneRecord = SeqRecord(seq, id=g, description=desc)
+            gene_seq_list.append(geneRecord)
+        else:
+            gene_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
+        parse_output(args, gene_seq_list)
 
 def get_gene_gb(args):
     '''

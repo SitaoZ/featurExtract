@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
+import gc
+import sys
 import time
 import argparse
 import gffutils
@@ -7,58 +9,82 @@ import pandas as pd
 import multiprocessing
 from Bio import SeqIO
 from Bio.Seq import Seq
+import _pickle as cPickle
 from Bio.SeqRecord import SeqRecord
-from featurExtract.commands.extract_UTR import utr
-from featurExtract.commands.extract_uORF import get_uorf
-from featurExtract.commands.extract_dORF import get_dorf
-from featurExtract.commands.extract_CDS import get_cds
+from featurExtract.utils.util import record
+from featurExtract.utils.util import gff_feature_dict
+from featurExtract.utils.util import gtf_feature_dict
+from featurExtract.commands.extract_utr import get_utr
+from featurExtract.commands.extract_uorf import get_uorf
+from featurExtract.commands.extract_dorf import get_dorf
+from featurExtract.commands.extract_cds import get_cds
 from featurExtract.commands.extract_promoter import get_promoter
 from featurExtract.commands.extract_terminator import get_terminator
 from featurExtract.commands.extract_exon import get_exon
 from featurExtract.commands.extract_intron import get_intron
 from featurExtract.commands.extract_gene import get_gene
-from featurExtract.commands.extract_IGR import get_IGR
+from featurExtract.commands.extract_igr import get_igr
 from featurExtract.commands.extract_transcript import get_transcript
-from featurExtract.commands.extract_mRNA import get_mRNA
+from featurExtract.commands.extract_mrna import get_mrna
+from featurExtract.commands.feature_stat import get_stat
 
+gc.disable()
 
-def create(args):
+def create2(args):
     '''
     parameters:
      args: arguments from argparse
-     This is a time- and memory-intense procedure, but it needs to be done only once for a given genome.
+     This is a time- and memory-intense procedure, 
+     but it needs to be done only once for a given genome.
     return:
      a db object
     '''
     fn = args.genomefeature
     database_id = args.output_prefix +'.'+ args.file_type
-    db = gffutils.create_db(fn, dbfn=database_id, force=True, keep_order=True,\
-        disable_infer_genes=True, disable_infer_transcripts=True,\
+    db = gffutils.create_db(fn, dbfn=database_id, force=True, keep_order=True,
+        disable_infer_genes=True, disable_infer_transcripts=True,
         merge_strategy='merge', sort_attribute_values=True)
     return db
 
-def genome_dict(genome_fasta_path):
+def create(args):
     '''
     parameters:
-     genome_fasta_path: genome reference of organism
+     args: arguments from argparse
+     This is a time- and memory-intense procedure, 
+     but it needs to be done only once for a given genome.
     return:
-     genome fasta dict
+     a dict object
     '''
-    genome = dict()
-    for record in SeqIO.parse(genome_fasta_path, 'fasta'):
-        genome[record.id] = record.seq
-    return genome
+    if args.style == 'gff':
+        db, t2g = gff_feature_dict(args.genomefeature, args.style)
+    elif args.style == 'gtf':
+        db, t2g = gtf_feature_dict(args.genomefeature, args.style)
+    else:
+        sys.exit(1)
+        print('The file format should be gff ot gtf.') 
+    database_id = os.path.join(args.output, args.prefix +'.'+ args.style)
+    with open(database_id, 'wb') as f:
+        # fastest way 
+        cPickle.dump((db, t2g), f, protocol=-1)
 
-
-def UTR(args):
+def stat(args):
+   '''
+   parameters:
+     args: arguments from argparse
+    return:
+     a genome statistics to stdout
+   '''
+   get_stat(args)
+   
+def utr(args):
     '''
     parameters:
      args: arguments from argparse 
     '''
-    utr(args)
+    get_utr(args)
 
 
-def uORF(args):
+def uorf(args):
     '''
     parameters:
      args: arguments from argparse
@@ -66,7 +92,7 @@ def uORF(args):
     get_uorf(args)
     
  
-def CDS(args):
+def cds(args):
     '''
     parameters:
      args: arguments from argparse
@@ -74,7 +100,7 @@ def CDS(args):
     get_cds(args)
 
 
-def dORF(args):
+def dorf(args):
     '''
     parameters:
      args: arugmensts from argparse
@@ -118,12 +144,12 @@ def gene(args):
     '''
     get_gene(args)
 
-def mRNA(args):
+def mrna(args):
     '''
     parameters:
      args: arguments from argparse
     '''
-    get_mRNA(args)
+    get_mrna(args)
 
 def transcript(args):
     '''
@@ -132,12 +158,12 @@ def transcript(args):
     '''
     get_transcript(args)
 
-def IGR(args):
+def igr(args):
     '''
     parameters:
      args: arguments from argparse
     '''
-    get_IGR(args)
+    get_igr(args)
 
 def motif(args):
     '''
@@ -149,24 +175,40 @@ parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(help='sub-command help')
 # create subcommand 
 parser_create = subparsers.add_parser('create', help='create annotation database')
-parser_create.add_argument('-f', '--file_type', choices=['GFF','GTF'],
-                           help='genome annotation file')
 parser_create.add_argument('-g', '--genomefeature', type=str, required=True, 
-                           help='genome annotation file')
-parser_create.add_argument('-o', '--output_prefix', type=str, required=True, 
-                           help='database absolute path')
+                           help='genome annotation file, gff or gtf')
+parser_create.add_argument('-o', '--output', type=str, required=True, 
+                           help='database output dir path')
+parser_create.add_argument('-p', '--prefix', type=str, required=True,
+                           help='database prefix')
+parser_create.add_argument('-s', '--style', choices=['gff','gtf'],
+                           help='genome annotation file format')
 parser_create.set_defaults(func=create)
 
+# stat subcommand
+parser_stat = subparsers.add_parser('stat', help='database stat')
+parser_stat.add_argument('-d', '--database', type=str, required=True,
+                           help='database created from creat command')
+parser_stat.add_argument('-g', '--genome', type=str, required=True,
+                             help='genome fasta path')
+parser_stat.add_argument('-o', '--output', type=str, required=True,
+                           help='stat output')
+parser_stat.add_argument('-s', '--style', choices=['gff','gtf'],
+                           help='genome annotation file format')
+parser_stat.set_defaults(func=stat)
+
+
 # promoter subcommand
-parser_promoter = subparsers.add_parser('promoter', help='extract promoter in genome or gene')
+parser_promoter = subparsers.add_parser('promoter', help='extract promoter sequence')
 parser_promoter.add_argument('-d', '--database', type=str, required=True, 
                              help='database generated by subcommand create')
-parser_promoter.add_argument('-f', '--output_format', type=str, choices=['csv','fasta'], default='csv',
+parser_promoter.add_argument('-f', '--output_format', type=str, 
+                             choices=['csv','fasta'], default='csv',
                              help = 'output format')
 parser_promoter.add_argument('-g', '--genome', type=str, required=True,
                              help='genome fasta path')
 parser_promoter.add_argument('-i', '--gene', type=str, 
-                             help='specific gene; if not given, return whole genes')
+                             help='specific gene (optional); if not given, return whole genes')
 parser_promoter.add_argument('-l', '--promoter_length', type=int, default=100,
                              help='promoter length before TSS (default: 100)')
 parser_promoter.add_argument('-o', '--output', type=str, 
@@ -181,7 +223,7 @@ parser_promoter.set_defaults(func=promoter)
 
 
 # terminator 
-parser_terminator = subparsers.add_parser('terminator', help='extract terminator in genome or gene')
+parser_terminator = subparsers.add_parser('terminator', help='extract terminator sequence')
 parser_terminator.add_argument('-d', '--database', type=str, required=True,
                              help='database generated by subcommand create')
 parser_terminator.add_argument('-f', '--output_format', type=str, choices=['csv','fasta'],
@@ -189,54 +231,58 @@ parser_terminator.add_argument('-f', '--output_format', type=str, choices=['csv'
 parser_terminator.add_argument('-g', '--genome', type=str, required=True,
                              help='genome fasta path')
 parser_terminator.add_argument('-i', '--gene', type=str,
-                             help='specific gene; if not given, return whole genes')
+                             help='specific gene (optional); if not given, return whole genes')
 parser_terminator.add_argument('-l', '--terminator_length', type=int, default=100,
                              help='terminator length (default: 100)')
 parser_terminator.add_argument('-o', '--output', type=str,
                              help = 'output file path')
-parser_terminator.add_argument('-p', '--print', action="store_true",
-                             help = 'output to stdout')
-parser_terminator.add_argument('-u', '--utr3_upper_length', type=int, default=10,
+parser_terminator.add_argument('-u', '--utr3_lower_length', type=int, default=10,
                              help='3\' length (default: 10)')
+parser_terminator.add_argument('-v', '--print', action="store_true", 
+                             help = 'output to stdout')
 parser_terminator.set_defaults(func=terminator)
 
 # gene subcommand 
-parser_gene = subparsers.add_parser('gene', help='extract gene in genome or gene')
+parser_gene = subparsers.add_parser('gene', help='extract gene sequence')
 parser_gene.add_argument('-d', '--database', type=str, required=True,
                          help='database generated by subcommand create')
+parser_gene.add_argument('-f', '--output_format', type=str, choices=['csv','fasta', 'gff', 'gtf'],
+                             help = 'output format')
 parser_gene.add_argument('-g', '--genome', type=str, required=True,
                          help='genome fasta')
 parser_gene.add_argument('-i', '--gene', type=str, 
-                         help='specific gene; if not given, return whole genes')
+                         help='specific gene (optional); if not given, return whole genes')
 parser_gene.add_argument('-o', '--output', type=str, 
                          help = 'output file path')
 parser_gene.add_argument('-p', '--print', action="store_true", 
                          help='output to stdout')
+parser_gene.add_argument('-s', '--style', choices=['gff','gtf'],
+                         help = 'gtf database or gff database')
 parser_gene.set_defaults(func=gene)
 
-# mRNA subcommand 
-parser_mRNA = subparsers.add_parser('mRNA', help='extract mature messager RNA in genome or gene')
-parser_mRNA.add_argument('-d', '--database', type=str, required=True, 
+# mrna subcommand 
+parser_mrna = subparsers.add_parser('mrna', help='extract messager RNA')
+parser_mrna.add_argument('-d', '--database', type=str, required=True, 
                          help='database generated by subcommand create')
-parser_mRNA.add_argument('-f', '--output_format', type=str, choices=['csv','fasta'], default='csv',
+parser_mrna.add_argument('-f', '--output_format', type=str, choices=['csv','fasta'], default='csv',
                          help = 'output format')
-parser_mRNA.add_argument('-g', '--genome', type=str, required=True, 
+parser_mrna.add_argument('-g', '--genome', type=str, required=True, 
                          help='genome fasta')
-parser_mRNA.add_argument('-i', '--transcript', type=str, 
-                         help='specific transcript; if not given, return whole transcripts')
-parser_mRNA.add_argument('-o', '--output', type=str, 
+parser_mrna.add_argument('-i', '--transcript', type=str, 
+                         help='specific transcript (optional); if not given, return whole transcripts')
+parser_mrna.add_argument('-o', '--output', type=str, 
                          help = 'output file path')
-parser_mRNA.add_argument('-p', '--print', action="store_true", 
+parser_mrna.add_argument('-p', '--print', action="store_true", 
                          help='output to stdout')
-parser_mRNA.add_argument('-s', '--style', choices=['GFF','GTF'],
-                         help = 'GTF database or GFF database')
-parser_mRNA.add_argument('-u', '--upper', action="store_true", 
-                         help='upper CDS and lower utr')
-parser_mRNA.set_defaults(func=mRNA)
+parser_mrna.add_argument('-s', '--style', choices=['gff','gtf'],
+                         help = 'gtf database or gff database')
+parser_mrna.add_argument('-u', '--upper', action="store_true", 
+                         help='upper cds and lower utr')
+parser_mrna.set_defaults(func=mrna)
 
 
 # transcript subcommand 
-parser_transcript = subparsers.add_parser('transcript', help='extract transcript (or refMrna) in genome or gene')
+parser_transcript = subparsers.add_parser('transcript', help='extract transcript')
 parser_transcript.add_argument('-d', '--database', type=str, required=True, 
                          help='database generated by subcommand create')
 parser_transcript.add_argument('-f', '--output_format', type=str, choices=['csv','fasta'], default='csv',
@@ -244,45 +290,45 @@ parser_transcript.add_argument('-f', '--output_format', type=str, choices=['csv'
 parser_transcript.add_argument('-g', '--genome', type=str, required=True, 
                          help='genome fasta')
 parser_transcript.add_argument('-i', '--transcript', type=str, 
-                         help='specific transcript; if not given, return whole transcripts')
+                         help='specific transcript (optional); if not given, return whole transcripts')
 parser_transcript.add_argument('-o', '--output', type=str, 
                          help = 'output file path')
 parser_transcript.add_argument('-p', '--process', type=int, default=4,
                          help='number of cDNA extract process, (default: 4)')
-parser_transcript.add_argument('-r', '--rna_feature', choices=['mRNA', 'all'], default='mRNA',
-                         help='The type of RNA used to extract cDNA, (default: mRNA)')
-parser_transcript.add_argument('-s', '--style', choices=['GFF','GTF'],
-                         help = 'GTF database or GFF database')
+parser_transcript.add_argument('-r', '--rna_feature', choices=['mrna', 'all'], default='mrna',
+                         help='The type of RNA for extract transcript, (default: mrna)')
+parser_transcript.add_argument('-s', '--style', choices=['gff','gtf'],
+                         help = 'gtf database or gff database')
 parser_transcript.add_argument('-u', '--upper', action="store_true", 
-                         help='upper CDS and lower utr')
+                         help='upper cds and lower utr')
 parser_transcript.add_argument('-v', '--print', action="store_true",
                          help='output to stdout')
 parser_transcript.set_defaults(func=transcript)
 
 
-# IGR subcommand 
-parser_IGR = subparsers.add_parser('IGR', help='extract IGR in genome or gene')
-parser_IGR.add_argument('-d', '--database', type=str, required=True,
+# igr subcommand 
+parser_igr = subparsers.add_parser('igr', help='extract intergenic region')
+parser_igr.add_argument('-d', '--database', type=str, required=True,
                         help='database generated by subcommand create')
-parser_IGR.add_argument('-f', '--output_format', type=str, choices=['csv','fasta', 'gff'], default='csv',
+parser_igr.add_argument('-f', '--output_format', type=str, choices=['csv','fasta', 'gff'], default='csv',
                          help = 'output format')
-parser_IGR.add_argument('-g', '--genome', type=str, required=True, 
+parser_igr.add_argument('-g', '--genome', type=str, required=True, 
                         help='genome fasta')
-parser_IGR.add_argument('-l', '--IGR_length', type=int, default=100,
-                        help='IGR length threshold')
-parser_IGR.add_argument('-o', '--output', type=str, 
+parser_igr.add_argument('-l', '--igr_length', type=int, default=100,
+                        help='igr length threshold')
+parser_igr.add_argument('-o', '--output', type=str, 
                         help = 'output fasta file path')
-parser_IGR.add_argument('-p', '--process', type=int, default=4,
-                         help='number of IGR extract process, (default: 4)')
-parser_IGR.add_argument('-s', '--style', choices=['GFF','GTF'], 
-                        help = 'GTF database only contain \
-                       protein genes, while GFF database contain protein genes and nocoding genes')
-parser_IGR.add_argument('-v', '--print', action="store_true",
+parser_igr.add_argument('-p', '--process', type=int, default=4,
+                         help='number of igr extract process, (default: 4)')
+parser_igr.add_argument('-s', '--style', choices=['gff','gtf'], 
+                        help = 'gtf database only contain \
+                       protein genes, while gff database contain protein genes and nocoding genes')
+parser_igr.add_argument('-v', '--print', action="store_true",
                          help='output to stdout')
-parser_IGR.set_defaults(func=IGR)
+parser_igr.set_defaults(func=igr)
 
-# UTR subcommand
-parser_utr = subparsers.add_parser('UTR', help='extract untranslated region sequence in genome or gene')
+# utr subcommand
+parser_utr = subparsers.add_parser('utr', help='extract untranslated region sequence')
 parser_utr.add_argument('-d', '--database', type=str, required=True, 
                         help='database generated by subcommand create')
 parser_utr.add_argument('-f', '--output_format', choices=['csv','fasta','gff'], default='csv',
@@ -290,51 +336,51 @@ parser_utr.add_argument('-f', '--output_format', choices=['csv','fasta','gff'], 
 parser_utr.add_argument('-g', '--genome', type=str, required=True,
                         help='genome fasta file')
 parser_utr.add_argument('-i', '--transcript', type=str, 
-                        help='specific transcript id; if not given, \
-                        whole transcript will return')
+                        help='specific transcript (optional); if not given, \
+                        return whole transcripts')
 parser_utr.add_argument('-o', '--output', type=str, 
                         help='output file path')
 parser_utr.add_argument('-p', '--process', type=int, default=4,
-                         help='number of UTR extract process, (default: 4)')
-parser_utr.add_argument('-r', '--rna_feature', choices=['mRNA', 'all'], default='mRNA',
-                         help='The type of RNA used to extract UTR, (default: mRNA)')
-parser_utr.add_argument('-s', '--style', choices=['GFF','GTF'], 
-                        help = 'GTF database or GFF database')
+                         help='number of utr extract process, (default: 4)')
+parser_utr.add_argument('-r', '--rna_feature', choices=['mrna', 'all'], default='mrna',
+                         help='The type of RNA for extract utr, (default: mrna)')
+parser_utr.add_argument('-s', '--style', choices=['gff','gtf'], 
+                        help = 'gtf database or gff database')
 parser_utr.add_argument('-v', '--print', action="store_true", 
                         help='output to stdout. -v and -o option are mutually exclusive')
-parser_utr.set_defaults(func=UTR)
+parser_utr.set_defaults(func=utr)
 
-# uORF subcommand
-parser_uORF = subparsers.add_parser('uORF', help='extract upper stream open reading sequence in genome or gene')
-parser_uORF.add_argument('-d', '--database', type=str, required=True, 
+# uorf subcommand
+parser_uorf = subparsers.add_parser('uorf', help='extract upperstream open reading sequence')
+parser_uorf.add_argument('-d', '--database', type=str, required=True, 
                          help='database generated by subcommand create')
-parser_uORF.add_argument('-f', '--output_format', choices=['csv','fasta','gff'], default='csv',
+parser_uorf.add_argument('-f', '--output_format', choices=['csv','fasta','gff'], default='csv',
                         help='output format (default: csv)')
-parser_uORF.add_argument('-g', '--genome', type=str, required=True,
+parser_uorf.add_argument('-g', '--genome', type=str, required=True,
                          help='genome fasta')
-parser_uORF.add_argument('-i', '--transcript', type=str, 
-                         help='specific transcript id; if not given, \
-                               whole transcript will return')
-parser_uORF.add_argument('-l', '--length', type=int, default=6,
-                         help='uORF length, (default: 6)')
-parser_uORF.add_argument('-m', '--schematic_without_intron', action='store_true',
-                         help='schematic figure file for uORF, CDS and transcript without intron')
-parser_uORF.add_argument('-n', '--schematic_with_intron', action='store_true',
-                         help='schematic figure file for uORF, CDS and transcript with intron')
-parser_uORF.add_argument('-o', '--output', type=str, 
+parser_uorf.add_argument('-i', '--transcript', type=str, 
+                         help='specific transcript (optional); if not given, \
+                               return whole transcripts')
+parser_uorf.add_argument('-l', '--length', type=int, default=6,
+                         help='uorf length, (default: 6)')
+parser_uorf.add_argument('-m', '--schematic_without_intron', action='store_true',
+                         help='schematic figure file for uorf, cds and transcript without intron')
+parser_uorf.add_argument('-n', '--schematic_with_intron', action='store_true',
+                         help='schematic figure file for uorf, cds and transcript with intron')
+parser_uorf.add_argument('-o', '--output', type=str, 
                          help='output file path')
-parser_uORF.add_argument('-p', '--process', type=int, default=4,
-                         help='number of uORF extract process, (default: 4)')
-parser_uORF.add_argument('-r', '--rna_feature', choices=['mRNA', 'all'], default='mRNA',
-                         help='The type of RNA used to make uORF identification (default: mRNA)')
-parser_uORF.add_argument('-s', '--style', choices=['GFF','GTF'], 
-                         help = 'GTF database or GFF database')
-parser_uORF.add_argument('-v', '--print', action="store_true",
+parser_uorf.add_argument('-p', '--process', type=int, default=4,
+                         help='number of uorf extract process, (default: 4)')
+parser_uorf.add_argument('-r', '--rna_feature', choices=['mrna', 'all'], default='mrna',
+                         help='The type of RNA for uorf extraction (default: mrna)')
+parser_uorf.add_argument('-s', '--style', choices=['gff','gtf'], 
+                         help = 'gtf database or gff database')
+parser_uorf.add_argument('-v', '--print', action="store_true",
                         help='output to stdout. -v and -o option are mutually exclusive')
-parser_uORF.set_defaults(func=uORF)
+parser_uorf.set_defaults(func=uorf)
 
-# CDS subcommand
-parser_cds = subparsers.add_parser('CDS', help='extract coding sequence in genome or gene')
+# cds subcommand
+parser_cds = subparsers.add_parser('cds', help='extract coding sequence')
 parser_cds.add_argument('-d', '--database', type=str, required=True, 
                         help='database generated by subcommand create')
 parser_cds.add_argument('-f', '--output_format', type=str, choices=['csv','fasta','gff'], default='csv',
@@ -342,52 +388,52 @@ parser_cds.add_argument('-f', '--output_format', type=str, choices=['csv','fasta
 parser_cds.add_argument('-g', '--genome', type=str, required=True,
                         help='genome fasta')
 parser_cds.add_argument('-i', '--transcript', type=str, 
-                        help='specific transcript id; if not given, \
-                        whole transcript will return')
+                        help='specific transcript (optional); if not given, \
+                        return whole transcripts')
 parser_cds.add_argument('-o', '--output', type=str, 
                         help='output file path')
 parser_cds.add_argument('-p', '--process', type=int, default=4,
-                        help='number of CDS extract process, (default: 4)')
-parser_cds.add_argument('-r', '--rna_feature', choices=['mRNA', 'all'], default='mRNA',
-                         help='The type of RNA used to extract CDS, (default: mRNA)')
-parser_cds.add_argument('-s', '--style', choices=['GFF','GTF'], 
-                        help = 'GTF database or GFF database')
+                        help='number of cds extract process, (default: 4)')
+parser_cds.add_argument('-r', '--rna_feature', choices=['mrna', 'all'], default='mrna',
+                         help='The type of RNA for extract cds, (default: mrna)')
+parser_cds.add_argument('-s', '--style', choices=['gff','gtf'], 
+                        help = 'gtf database or gff database')
 parser_cds.add_argument('-v', '--print', action="store_true",
                         help='output to stdout. -v and -o option are mutually exclusive')
-parser_cds.set_defaults(func=CDS)
+parser_cds.set_defaults(func=cds)
 
-# dORF subcommand 
-parser_dORF = subparsers.add_parser('dORF', help='extract down stream open reading frame sequence in a genome or gene')
-parser_dORF.add_argument('-d', '--database', type=str, required=True,
+# dorf subcommand 
+parser_dorf = subparsers.add_parser('dorf', help='extract downstream open reading frame sequence')
+parser_dorf.add_argument('-d', '--database', type=str, required=True,
                          help='database generated by subcommand create')
-parser_dORF.add_argument('-f', '--output_format', choices=['csv','fasta','gff'], default='csv',
+parser_dorf.add_argument('-f', '--output_format', choices=['csv','fasta','gff'], default='csv',
                         help='output format')
-parser_dORF.add_argument('-g', '--genome', type=str, required=True, 
+parser_dorf.add_argument('-g', '--genome', type=str, required=True, 
                          help='genome fasta')
-parser_dORF.add_argument('-i', '--transcript', type=str, 
-                         help='specific transcript id; if not given, \
-                               whole transcript will return')
-parser_dORF.add_argument('-l', '--length', type=int, default=6,
-                         help='dORF length, (default: 6)')
-parser_dORF.add_argument('-m', '--schematic_without_intron', action='store_true',
-                         help='schematic figure file for dORF, CDS and transcript without intron')
-parser_dORF.add_argument('-n', '--schematic_with_intron', action='store_true',
-                         help='schematic figure file for dORF, CDS and transcript with intron')
-parser_dORF.add_argument('-o', '--output', type=str, 
+parser_dorf.add_argument('-i', '--transcript', type=str, 
+                         help='specific transcript (optional); if not given, \
+                               return whole transcripts')
+parser_dorf.add_argument('-l', '--length', type=int, default=6,
+                         help='dorf length, (default: 6)')
+parser_dorf.add_argument('-m', '--schematic_without_intron', action='store_true',
+                         help='schematic figure file for dorf, cds and transcript without intron')
+parser_dorf.add_argument('-n', '--schematic_with_intron', action='store_true',
+                         help='schematic figure file for dorf, cds and transcript with intron')
+parser_dorf.add_argument('-o', '--output', type=str, 
                          help='output file path')
-parser_dORF.add_argument('-p', '--process', type=int, default=4,
-                         help='number of dORF extract process, (default: 4)')
-parser_dORF.add_argument('-r', '--rna_feature', choices=['mRNA', 'all'], default='mRNA',
-                         help='The type of RNA used to make dORF identification (default: mRNA)')
-parser_dORF.add_argument('-s', '--style', choices=['GFF','GTF'], 
-                         help = 'GTF database or GFF database')
-parser_dORF.add_argument('-v', '--print', action="store_true",
+parser_dorf.add_argument('-p', '--process', type=int, default=4,
+                         help='number of dorf extract process, (default: 4)')
+parser_dorf.add_argument('-r', '--rna_feature', choices=['mrna', 'all'], default='mrna',
+                         help='The type of RNA for dorf extraction (default: mrna)')
+parser_dorf.add_argument('-s', '--style', choices=['gff','gtf'], 
+                         help = 'gtf database or gff database')
+parser_dorf.add_argument('-v', '--print', action="store_true",
                         help='output to stdout. -v and -o option are mutually exclusive')
-parser_dORF.set_defaults(func=dORF)
+parser_dorf.set_defaults(func=dorf)
 
 
 # exon 
-parser_exon = subparsers.add_parser('exon', help='extract exon sequence for a given transcript')
+parser_exon = subparsers.add_parser('exon', help='extract exon sequence')
 parser_exon.add_argument('-d', '--database', type=str, required=True, 
                          help='database generated by subcommand create')
 parser_exon.add_argument('-f', '--output_format', choices=['csv','fasta','gff'], default='csv',
@@ -395,21 +441,22 @@ parser_exon.add_argument('-f', '--output_format', choices=['csv','fasta','gff'],
 parser_exon.add_argument('-g', '--genome', type=str, required=True, 
                          help='genome fasta')
 parser_exon.add_argument('-i', '--transcript', type=str, 
-                         help='specific transcript id; needed')
+                         help='specific transcript (optional);  if not given, \
+                               return whole transcripts')
 parser_exon.add_argument('-o', '--output', type=str, 
                          help='output file path')
 parser_exon.add_argument('-p', '--process', type=int, default=4,
                          help='number of exon extract process, (default: 4)')
-parser_exon.add_argument('-r', '--rna_feature', choices=['mRNA', 'all'], default='mRNA',
-                         help='The type of RNA used to make exon extraction (default: mRNA)')
-parser_exon.add_argument('-s', '--style', choices=['GFF','GTF'], 
-                         help = 'GTF database or GFF database')
+parser_exon.add_argument('-r', '--rna_feature', choices=['mrna', 'all'], default='mrna',
+                         help='The type of RNA for exon extraction (default: mrna)')
+parser_exon.add_argument('-s', '--style', choices=['gff','gtf'], 
+                         help = 'gtf database or gff database')
 parser_exon.add_argument('-v', '--print', action="store_true", 
                          help='output to stdout')
 parser_exon.set_defaults(func=exon)
 
 # intron 
-parser_intron = subparsers.add_parser('intron', help='extract exon sequence for a given transcript')
+parser_intron = subparsers.add_parser('intron', help='extract intron sequence')
 parser_intron.add_argument('-d', '--database', type=str, required=True, 
                            help='database generated by subcommand create')
 parser_intron.add_argument('-f', '--output_format', choices=['csv','fasta','gff'], default='csv',
@@ -417,15 +464,16 @@ parser_intron.add_argument('-f', '--output_format', choices=['csv','fasta','gff'
 parser_intron.add_argument('-g', '--genome', type=str, required=True, 
                            help='genome fasta')
 parser_intron.add_argument('-i', '--transcript', type=str, 
-                           help='specific transcript id; needed')
+                           help='specific transcript (optional);  if not given, \
+                               return whole transcripts')
 parser_intron.add_argument('-o', '--output', type=str, 
                            help='output file path')
 parser_intron.add_argument('-p', '--process', type=int, default=4, 
                            help='number of exon extract process, (default: 4)')
-parser_intron.add_argument('-r', '--rna_feature', choices=['mRNA', 'all'], default='mRNA',
-                         help='The type of RNA used to make exon extraction (default: mRNA)')
-parser_intron.add_argument('-s', '--style', choices=['GFF','GTF'], 
-                           help = 'GTF database or GFF database')
+parser_intron.add_argument('-r', '--rna_feature', choices=['mrna', 'all'], default='mrna',
+                         help='The type of RNA for intron extraction (default: mrna)')
+parser_intron.add_argument('-s', '--style', choices=['gff','gtf'], 
+                           help = 'gtf database or gff database')
 parser_intron.add_argument('-v', '--print', action="store_true",
                          help='output to stdout')
 parser_intron.set_defaults(func=intron)
@@ -444,4 +492,5 @@ args = parser.parse_args()
 #print('[%s runing ...]'%(time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())))
 args.func(args)
 #print('[%s finished ...]'%(time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())))
-   
+
+gc.enable()

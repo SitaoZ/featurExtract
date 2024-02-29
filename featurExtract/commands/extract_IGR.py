@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import re
 import sys
+import pickle
 import gffutils
 import itertools
 import pandas as pd 
@@ -10,7 +12,8 @@ from multiprocessing import Pool
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict, deque
 from featurExtract.database.database import create_db, genome_dict
-from featurExtract.utils.util import parse_output
+from featurExtract.utils.util import parse_output, gff_feature_dict
+from featurExtract.utils.util import record
 
 _CSV_HEADER = ['IGR_ID', 'Chrom', 'Strand', 'Start_genome', \
                'End_genome', 'Sequence']
@@ -23,10 +26,17 @@ def sub_IGR(params):
         igr_seq_list, a deque class 
     """
     chrom, database, genome, style, output_format, genes = params
-    genomeDict = genome_dict(genome)
+    if style == 'GFF':
+        g_pat = re.compile(r'ID=(\S+?);')
+    else:
+        g_pat = re.compile(r'gene_id "(\S+?)";')
     igr_seq_list = deque()
     gene_positions = list(itertools.chain(*[[g.start,g.end] for g in genes]))
-    gene_ids = [g.id for g in genes]
+    # gene_ids = [g.attribute for g in genes]
+    gene_ids = []
+    for g in genes:
+        match = g_pat.search(g.attribute)
+        gene_ids.append(match.group(1)) 
     strands = [g.strand for g in genes]
     if len(gene_positions)/2 == 1:
         # only one gene
@@ -44,7 +54,7 @@ def sub_IGR(params):
                 if s > e-1:
                     # gene overlap
                     continue 
-                igr_seq= genomeDict[chrom][s:e-1]
+                igr_seq= genome[chrom][s:e-1]
                 if output_format == 'gff':
                     # 1       araport11       gene    3631    5899    .       +       .       ID=gene:AT1G01010;
                     igr_gff = [chrom, 'featurExtract', 'igr', s+1, e-1, '.', igr_strand, '.', f'ID={igr_id};']
@@ -65,7 +75,7 @@ def sub_IGR(params):
                     igr_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
         return igr_seq_list
 
-def get_IGR(args):
+def get_igr(args):
     '''
     parameters:
         args: parse from argparse
@@ -73,24 +83,27 @@ def get_IGR(args):
         elements write to a file or stdout
     '''
     # GTF noncoding are annotated transcript,while GFF noncoding ared annotated gene
-    if not args.style:
-        sys.stderr.write("parameter -s should be assign \n")
-        sys.exit()
-    genomeDict = genome_dict(args.genome) # load fasta 
-    db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    # split chrom for processes
+    #if args.style == 'GFF':
+    #    db, t2g = gff_feature_dict(args.database, args.style)
+    #else:
+    #    db, t2g = gtf_feature_dict(args.database, args.style)
+    with open(args.database, 'rb') as f:
+        db = pickle.load(f)
+    genome = genome_dict(args.genome)
     chrom_split = dict()
-    for g in db.features_of_type('gene', order_by='start'):
-        chrom = g.chrom
+    for g in db:
+        gene = db[g]['gene']
+        chrom = gene.chr
         if chrom_split.get(chrom):
-            chrom_split[chrom].append(g)
+            chrom_split[chrom].append(gene)
         else:
-            chrom_split[chrom] = [g]
-    param_list = [(chrom, args.database, args.genome, args.style, args.output_format, chrom_split[chrom]) for chrom in chrom_split.keys()]
-    with Pool(processes=args.process) as p:
-        igr_seq_list = list(tqdm(p.imap(sub_IGR, param_list), total=len(param_list), ncols = 80, desc='IGR Processing:'))
-        igr_seq_list = [d for de in igr_seq_list if de != None for d in de]
-        parse_output(args, igr_seq_list)
+            chrom_split[chrom] = [gene]
+    param_list = [(chrom, args.database, genome, args.style, args.output_format, chrom_split[chrom]) for chrom in chrom_split.keys()]
+    igr_seq_list = deque()
+    for param in tqdm(param_list, total=len(param_list), ncols=80, desc='IGR processing:'):
+        igr_seq_list.append(sub_IGR(param))
+    igr_seq_list = [d for de in igr_seq_list if de != None for d in de]
+    parse_output(args, igr_seq_list)
 
 def get_IGR_gb(args):
     '''

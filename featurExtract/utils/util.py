@@ -1,17 +1,26 @@
+import re
 import sys
 import pandas as pd 
 from Bio import SeqIO
 from io import StringIO
+from collections import defaultdict, namedtuple
 
-def stop_codon_seq(db, transcript, genome):
-    s = ''
-    for codon in db.children(transcript, featuretype='stop_codon', order_by='start'):
-        s = codon.sequence(genome, use_strand=False) # 不反向互补,序列全部连接后再互补
-    return s
+# gffutils version
+#def stop_codon_seq(db, transcript, genome):
+#    s = ''
+#    for codon in db.children(transcript, featuretype='stop_codon', order_by='start'):
+#        s = codon.sequence(genome, use_strand=False) # 不反向互补,序列全部连接后再互补
+#    return s
+
+
+def stop_codon_seq(db, gene, transcript, genome):
+    stop_codon = db[gene][transcript]['stop_codon']
+    start, end = stop_codon.start, stop_codon.end
+    return genome[start-1 : end]
 
 def add_stop_codon(seq, strand, stop_codon_seq):
     '''
-    use for GTF seq add stop codon in CDS extracing  
+    use for gtf seq add stop codon in CDS extracing  
     parameter:
      seq: sequence string 
      strand : ranscript strand 
@@ -36,13 +45,13 @@ def mRNA_type(file_format):
     return: 
      mRNA type string
     '''
-    if file_format == 'GFF':
+    if file_format == 'gff':
         return 'mRNA'
         
-    elif file_format == 'GTF':
+    elif file_format == 'gtf':
         return 'transcript'
     else:
-        sys.stderr.write("parameter -s should be assign \n")
+        sys.stderr.write("parameter --style/-s should be assign \n")
         sys.exit(1)
 
 def utr3_type(file_format):
@@ -53,12 +62,13 @@ def utr3_type(file_format):
     return: 
      utr3 type string
     '''
-    if file_format == 'GFF':
+    if file_format == 'gff':
         return 'three_prime_UTR'
-    elif file_format == 'GTF':
-        return 'three_prime_utr'
+    elif file_format == 'gtf':
+        # return 'three_prime_utr'
+        return 'three_prime_UTR'
     else:
-        sys.stderr.write("parameter -s should be assign \n")
+        sys.stderr.write("parameter --style/-s should be assign \n")
         sys.exit(1)
 
 def utr5_type(file_format):
@@ -69,12 +79,13 @@ def utr5_type(file_format):
     return:
      utr5 type string
     '''
-    if file_format == 'GFF':
+    if file_format == 'gff':
         return 'five_prime_UTR'
-    elif file_format == 'GTF':
-        return 'five_prime_utr'
+    elif file_format == 'gtf':
+        # return 'five_prime_utr'
+        return 'five_prime_UTR'
     else:
-        sys.stderr.write("parameter -s should be assign \n")
+        sys.stderr.write("parameter --style/-s should be assign \n")
         sys.exit(1)
 
 def seq_upper_lower(seq,start,end):
@@ -127,3 +138,198 @@ def parse_output(args, seq_list):
             sys.exit('output(-o) format not be specified {csv, fasta, gff}.')
     else:
         sys.exit('-o or -v should be specified')
+
+
+record = namedtuple('record', ['chr','source', 'type','start', 'end', 'score', 'strand', 'phase', 'attribute'])
+
+def gtf_feature_dict(file_path, file_type):
+    """
+    parse gtf genome feature file
+      param: 
+          file_path: gff/gtf path
+          file_type: gff or gtf
+      return:
+          feature dict
+          transcript2gene dict
+    """
+    t_pat = re.compile(r'transcript_id "(\S+?)";') if file_type == 'gtf' else re.compile(r'ID=(\S+?);')
+    g_pat = re.compile(r'gene_id "(\S+?)";') if file_type == 'gtf' else re.compile(r'Parent=(\S+?);')
+    five_prime = utr5_type(file_type)
+    three_prime = utr3_type(file_type)
+    g_dict = dict()
+    t2g = dict()
+    all_gene = set()
+    gene_info = dict()
+    with open(file_path, 'r') as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            line = line.strip()
+            array = line.split('\t')
+            array[3], array[4] = int(array[3]), int(array[4])
+            f_type = array[2]
+            if 'gene' in f_type:
+                gene = g_pat.search(array[8]).group(1)
+                if not g_dict.get(gene):
+                    g_dict[gene] = defaultdict(dict)
+                    g_dict[gene]['gene'] = record._make(array)
+                else:
+                    if not g_dict[gene].get('gene'):
+                        g_dict[gene]['gene'] = record._make(array)
+                continue
+            if f_type == 'miRNA':
+                continue
+            ts = t_pat.search(array[8]).group(1)
+            gene = g_pat.search(array[8]).group(1)
+            if 'RNA' in f_type or 'transcript' in f_type:
+                t2g[ts] = gene
+                all_gene.add(gene)
+                if not g_dict.get(gene):
+                    g_dict[gene] = defaultdict(dict)
+                    g_dict[gene][ts] = defaultdict(dict)
+                else:
+                    g_dict[gene][ts] = defaultdict(dict)
+                g_dict[gene][ts]["mRNA"] = record._make(array)
+                g_dict[gene][ts]["CDS"] = []
+                g_dict[gene][ts]["exon"] = []
+                g_dict[gene][ts][five_prime] = []
+                g_dict[gene][ts][three_prime] = []
+            elif f_type == 'CDS':
+                if gene not in all_gene:
+                    continue
+                g_dict[gene][ts]["CDS"].append(record._make(array))
+            elif 'exon' in f_type:
+                if gene not in all_gene:
+                    continue
+                g_dict[gene][ts]["exon"].append(record._make(array))
+            elif f_type == five_prime:
+                if gene not in all_gene:
+                    continue
+                g_dict[gene][ts][five_prime].append(record._make(array))
+            elif f_type == three_prime:
+                if gene not in all_gene:
+                    continue
+                g_dict[gene][ts][three_prime].append(record._make(array))
+            elif f_type == 'stop_codon':
+                g_dict[gene][ts]['stop_codon'] = record._make(array)
+            else:
+                pass
+    # check
+    for g in g_dict:
+        for t in g_dict[g]:
+            if t == 'gene':
+                continue
+            if not g_dict[g][t].get('mRNA'):
+                g_dict[g][t]['mRNA'] = g_dict[g]['gene']
+    return g_dict, t2g
+
+
+def gff_feature_dict(file_path, file_type):
+    """
+    parse gff genome feature file
+      param: 
+          file_path: gff/gtf path
+          file_type: gff or gtf
+      return:
+          feature dict
+          transcript2gene dict
+    """
+    t_pat = re.compile(r'ID=(\S+?);')
+    g_pat = re.compile(r'Parent=(\S+?);')
+    five_prime = utr5_type(file_type)
+    three_prime = utr3_type(file_type)
+    g_dict = dict()
+    t2g = dict()
+    all_gene = set()
+    with open(file_path, 'r') as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            line = line.strip()
+            if not line.endswith(";"):
+                line = line + ';'
+            array = line.split('\t')
+            array[3], array[4] = int(array[3]), int(array[4])
+            f_type = array[2]
+            if 'gene' in f_type:
+                gene = t_pat.search(array[8]).group(1)
+                if not g_dict.get(gene):
+                    g_dict[gene] = defaultdict(dict)
+                    g_dict[gene]['gene'] = record._make(array)
+                else:
+                    if not g_dict[gene].get('gene'):
+                        g_dict[gene]['gene'] = record._make(array)
+            if f_type == 'miRNA':
+                continue
+            if 'RNA' in f_type or 'transcript' in f_type:
+                if 'gene' in f_type:
+                    continue
+                ts = t_pat.search(array[8]).group(1)
+                gene = g_pat.search(array[8]).group(1)
+                t2g[ts] = gene
+                all_gene.add(gene)
+                if not g_dict.get(gene):
+                    g_dict[gene] = defaultdict(dict)
+                    g_dict[gene][ts] = defaultdict(dict)
+                else:
+                    g_dict[gene][ts] = defaultdict(dict)
+                g_dict[gene][ts]["mRNA"] = record._make(array)
+                g_dict[gene][ts]["CDS"] = []
+                g_dict[gene][ts]["exon"] = []
+                g_dict[gene][ts][five_prime] = []
+                g_dict[gene][ts][three_prime] = []
+            elif f_type == 'CDS':
+                tss = g_pat.search(array[8]).group(1)
+                for ts in tss.split(','):
+                    if g_dict.get(ts):
+                        continue
+                    if not t2g.get(ts):
+                        continue
+                    gene = t2g[ts]
+                    if gene not in all_gene:
+                        continue
+                    g_dict[gene][ts]["CDS"].append(record._make(array))
+            elif f_type == 'exon':
+                tss = g_pat.search(array[8]).group(1)
+                for ts in tss.split(','):
+                    if g_dict.get(ts):
+                        continue
+                    if not t2g.get(ts):
+                        continue
+                    gene = t2g[ts]
+                    if gene not in all_gene:
+                        continue
+                    if not g_dict[gene][ts].get('exon'):
+                        g_dict[gene][ts]["exon"] = []
+                    g_dict[gene][ts]["exon"].append(record._make(array))
+            elif f_type == five_prime:
+                tss = g_pat.search(array[8]).group(1)
+                for ts in tss.split(','):
+                    if not t2g.get(ts):
+                        continue
+                    gene = t2g[ts]
+                    if gene not in all_gene:
+                        continue
+                    g_dict[gene][ts][five_prime].append(record._make(array))
+            elif f_type == three_prime:
+                tss = g_pat.search(array[8]).group(1)
+                for ts in tss.split(','):
+                    if not t2g.get(ts):
+                        continue
+                    gene = t2g[ts]
+                    if gene not in all_gene:
+                        continue
+                    g_dict[gene][ts][three_prime].append(record._make(array))
+            elif f_type == 'stop_codon':
+                g_dict[gene][ts]['stop_codon'] = record._make(array)
+            else:
+                pass
+    # check
+    for g in g_dict:
+        for t in g_dict[g]:
+            if t == 'gene':
+                continue
+            if not g_dict[g][t].get('mRNA'):
+                g_dict[g][t]['mRNA'] = g_dict[g]['gene']
+    return g_dict, t2g
+

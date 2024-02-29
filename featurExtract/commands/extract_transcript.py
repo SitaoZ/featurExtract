@@ -2,13 +2,14 @@
 import sys
 import gffutils
 import pandas as pd 
+import _pickle as cPickle
 from tqdm import tqdm 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from multiprocessing import Pool
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict, deque
-from featurExtract.database.database import create_db
+from featurExtract.database.database import create_db, genome_dict
 from featurExtract.utils.util import add_stop_codon, mRNA_type, seq_upper_lower, parse_output
 
 '''
@@ -21,7 +22,7 @@ def stop_codon(db, transcript, genome):
     return s
 
 
-def anchor_CDS(db, genome, transcript, style):
+def anchor_CDS(g, t, db, genome, style):
     '''
     parameters: 
      db : database create by gffutils
@@ -32,88 +33,33 @@ def anchor_CDS(db, genome, transcript, style):
      stop_codon positiopn 
      cds length 
     '''
-    if style == 'GTF':
-        start_codon_s, stop_codon_e = 0, 0
-        cds = ''
-        for c in db.children(transcript, featuretype='CDS', order_by='start'):
-            cds += c.sequence(genome, use_strand=False)
+    mRNA = db[g][t]['mRNA']
+    cds = ''
+    cds_len = 0
+    if db[g][t].get('CDS'):
+        for c in db[g][t].get('CDS'):
+            chrom, start, end, strand = c.chr, c.start, c.end, c.strand
+            cds += str(genome[chrom][start-1:end])
         cds = Seq(cds)
-        if transcript.strand == '-':
+        if mRNA.strand == '-':
             cds = cds.reverse_complement()
-        cds_len = len(cds) + 3 # add stop codon length
-        if transcript.strand == '-':
-            for i in db.children(transcript, featuretype='start_codon', order_by='start'):
-                start_codon_s = i.end - 1
-                start_codon_e = i.start - 1
-            for i in db.children(transcript, featuretype='stop_codon', order_by='start'):
-                stop_codon_s = i.end - 1
-                stop_codon_e = i.start - 1  
-        else:
-            # contain + .
-            for i in db.children(transcript, featuretype='start_codon', order_by='start'):
-                start_codon_s = i.start - 1
-                start_codon_e = i.end -1 
-            for i in db.children(transcript, featuretype='stop_codon', order_by='start'):
-                stop_codon_s = i.start - 1
-                stop_codon_e = i.end -1 
-         
-        return start_codon_s, stop_codon_e, cds_len
-    elif style == 'GFF':
-        start_codon_s, stop_codon_e = 0, 0
-        cds = ''
-        for c in db.children(transcript, featuretype='CDS', order_by='start'):
-            cds += c.sequence(genome, use_strand=False)
-        cds = Seq(cds)
-        if transcript.strand == '-':
-            cds = cds.reverse_complement()
-        cds_len = len(cds) # cds full length
-        if transcript.strand == '-':
-            for i in db.children(transcript, featuretype='five_prime_UTR', order_by='start'):
-                # occasionally a transcript has more then one three_prime_UTR
-                # occasionally a transcript do not have three_prime_UTR, start_codon_s = first exon
-                # the first five_prime_UTR position should be saved in minus strand
-                if i:
-                    start_codon_s = i.start - 1
-                    start_codon_e = i.start - 3
-                    break
-                else:
-                    print('five_prime_UTR does not exist')
-                break
-            for i in db.children(transcript, featuretype='three_prime_UTR', order_by='start'):
-                # occasionally a transcript has more then one three_prime_UTR
-                # occasionally a transcript do not have three_prime_UTR 
-                # the last save (position large)
-                if i:
-                    stop_codon_s = i.end - 1
-                    stop_codon_e = i.end - 3
-                else:
-                    print('three_prime_UTR does not exist')
-            if start_codon_s == 0:
-                pass # five_prime_UTR does not exist
-            if stop_codon_e == 0 :
-                pass # three_prime_UTR does not exist  
-        else:
-            # contain + .
-            for i in db.children(transcript, featuretype='five_prime_UTR', order_by='start'):
-                # occasionally a transcript has more then one three_prime_UTR
-                # occasionally a transcript do not have three_prime_UTR, start_codon_s = first exon
-                # the last five_prime_UTR position should be saved in plus strand
-                if i:
-                    start_codon_s = i.end + 1
-                    start_codon_e = i.end + 3
-                else:
-                    print('five_prime_UTR does not exist')
-            for i in db.children(transcript, featuretype='three_prime_UTR', order_by='start'):
-                # occasionally a transcript has more then one three_prime_UTR
-                # the first three_prime_UTR position should be saved in plus strand
-                if i:
-                    stop_codon_s = i.start - 3 
-                    stop_codon_e = i.start - 1
-                    break 
-                else:
-                    print('three_prime_UTR does not exist')
-        
-        return start_codon_s, stop_codon_e, cds_len
+        cds_len = len(cds) # add stop codon length
+    utr5 = ''
+    utr5_len = 0
+    if db[g][t].get('five_prime_UTR'):
+        for u in db[g][t].get('five_prime_UTR'):
+            chrom, start, end, strand = u.chr, u.start, u.end, u.strand
+            utr5 += str(genome[chrom][start-1:end])
+        utr5_len = len(utr5)
+    utr3 = ''
+    utr3_len = 0
+    if db[g][t].get('three_prime_UTR'):
+        for u in db[g][t].get('five_prime_UTR'):
+            chrom, start, end, strand = u.chr, u.start, u.end, u.strand
+            utr3 += str(genome[chrom][start-1:end])
+        utr3_len = len(utr3)
+          
+    return utr5_len, utr3_len, cds_len
 
 
 _CSV_HEADER = ['TranscriptID', 'Chrom', 'Start_genome', \
@@ -127,54 +73,36 @@ def sub_transcript(params):
     return:
         transcript_seq_list, a deque
     """
-    t, database, genome, style, upper, output_format = params
-    db = gffutils.FeatureDB(database, keep_order=True) # load database
+    g, t, db, genome, style, upper, output_format = params
     transcript_seq_list = deque()
-    start_codon_s, stop_codon_e, cds_len = anchor_CDS(db, genome, t, style)
+    utr5_len, utr3_len, cds_len = anchor_CDS(g, t, db, genome, style)
     atg2firstexon = 0
     seq = ''
-    for e in db.children(t, featuretype='exon', order_by='start'):
-        # 不反向互补，对于负链要得到全部的cds后再一次性反向互补
-        s = e.sequence(genome, use_strand=False)
+    mRNA = db[g][t]['mRNA']
+    for e in db[g][t]['exon']:
+        chrom, start, end, strand = e.chr, e.start, e.end, e.strand
+        s = str(genome[chrom][start-1:end])
         seq += s
-        if t.strand == '-':
-            if start_codon_s == 0:
-                # five prime_UTR not exist
-                atg2firstexon = 0
-            else:
-                if e.start >= start_codon_s :
-                    atg2firstexon += len(s)
-                elif e.start < start_codon_s < e.end:
-                    truncated = e.end - start_codon_s #  反向减法
-                    atg2firstexon += truncated
-        else:
-            # contain + .
-            if start_codon_s == 0:
-                # five prime_UTR not exist
-                atg2firstexon = 0
-            else:
-                if start_codon_s >= e.end:
-                    atg2firstexon += len(s)
-                elif e.end > start_codon_s > e.start:
-                    truncated = start_codon_s - e.start
-                    atg2firstexon += truncated
     seq = Seq(seq)
-    if t.strand == '-':
+    if mRNA.strand == '-':
         seq = seq.reverse_complement()
     if upper:
-        seq = seq_upper_lower(seq, atg2firstexon, atg2firstexon + cds_len)
+        seq = seq_upper_lower(seq, utr5_len , utr5_len + cds_len)
     # position in transcript 1 based 
-    cds_start_transcript = atg2firstexon + 1
-    cds_end_transcript = atg2firstexon + cds_len
+    if db[g][t].get('CDS'):
+        cds_start_transcript = utr5_len + 1
+    else:
+        cds_start_transcript = 0
+    cds_end_transcript = utr5_len + cds_len
     if output_format == 'fasta':
-        desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(t.strand,t.start,t.end,len(seq),
+        desc='strand:%s start:%d end:%d length=%d CDS=%d-%d'%(mRNA.strand, mRNA.start, mRNA.end, len(seq),
                                                               cds_start_transcript,
                                                               cds_end_transcript)
-        transcriptRecord = SeqRecord(seq, id=t.id.replace('transcript:',''), description=desc)
+        transcriptRecord = SeqRecord(seq, id=t, description=desc)
         transcript_seq_list.append(transcriptRecord)
     else:
-        it = [t.id.replace('transcript:',''), t.chrom, t.start, t.end,\
-              cds_start_transcript, cds_end_transcript, t.strand, seq]
+        it = [t, mRNA.chr, mRNA.start, mRNA.end,\
+              cds_start_transcript, cds_end_transcript, mRNA.strand, seq]
         transcript_seq_list.append(dict((_CSV_HEADER[i], it[i]) for i in range(len(_CSV_HEADER))))
     return transcript_seq_list
 
@@ -186,18 +114,21 @@ def get_transcript(args):
     return:
         elements write to a file or stdout
     '''
-    db = gffutils.FeatureDB(args.database, keep_order=True) # load database
-    feature_types = db.featuretypes()
+    # db = gffutils.FeatureDB(args.database, keep_order=True) # load database
+    with open(args.database, 'rb') as f:
+        db, t2g = cPickle.load(f)
+    genome = genome_dict(args.genome)
+    # feature_types = db.featuretypes()
     # assert GTF or GFF
-    if args.rna_feature == 'mRNA':
-        mRNA_str = mRNA_type(args.style)
-    else:
-        mRNA_str = tuple(x for x in list(feature_types) if 'RNA' in x or 'transcript' in x)
+    #if args.rna_feature == 'mrna':
+    #    mRNA_str = mRNA_type(args.style)
+    #else:
+    #    mRNA_str = tuple(x for x in list(feature_types) if 'RNA' in x or 'transcript' in x)
     if not args.transcript:
-        # loop all cdns in genome
-        param_list = [(t, args.database, args.genome, args.style, args.upper, args.output_format) for t in db.features_of_type(mRNA_str, order_by='start')]
-        with Pool(processes=args.process) as p:
-            transcript_seq_list = list(tqdm(p.imap(sub_transcript, param_list), total=len(param_list), ncols = 80, desc='cDNA Processing:'))
+        param_list = [(g, t, db, genome, args.style, args.upper, args.output_format) for g in db for t in db[g] if t != 'gene']
+        transcript_seq_list = deque()
+        for para in tqdm(param_list, ncols = 80, total=len(param_list), desc='Transcript processing:'):
+            transcript_seq_list.append(sub_transcript(para))
         transcript_seq_list = [d for de in transcript_seq_list if de != None for d in de]
         parse_output(args, transcript_seq_list)
     else:

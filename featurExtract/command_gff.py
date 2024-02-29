@@ -9,25 +9,25 @@ def sub_usage(args):
         print("          \033[1;35;40m%s\033[0m    \033[1;32;40m%s\033[0m" % (args[0], args[1]) )
 
 def main_usage():
-    print("\n\033[1;33;40mProgram: \033[0m\033[1;35;40m featurExtract \033[1;31;40m(pipeline for genomic feature extract)\033[0m")
+    print("\n\033[1;33;40mProgram: \033[0m\033[1;35;40m featurExtract \033[1;31;40m(tools for genomic feature extract)\033[0m")
     print("\033[1;33;40mVersion: \033[0m\033[1;32;40m %s\033[0m"%(__version__))
     print("\033[1;33;40mContact: \033[0m\033[1;32;40m Sitao Zhu <zhusitao1990@163.com>\033[0m")
     print("\033[1;33;40mUsage  : \033[0m\033[1;35;40m featurExtract\033[0m \033[1;31;40m<command> [parameters] \033[0m")
     print("\033[1;33;40mCommand: \033[0m")
-    sub_usage(["create    ", "create database for GTF or GFF"])
-    sub_usage(["coverage  ", "read coverage by transcript models"])
-    sub_usage(["CDS       ", "extract CDS for gene or genome"])
-    sub_usage(["dORF      ", "extract downstream (dORF) for gene or genome"])
-    sub_usage(["exon      ", "extract exon for transcript"])
-    sub_usage(["gene      ", "extract gene sequence fo gene or genome"])
-    sub_usage(["intron    ", "extract intron for transcript"])
-    sub_usage(["IGR       ", "extract intergenic region (IGR) between genes"])
-    sub_usage(["mRNA      ", "extract mature messager RNA for transcript"])
-    sub_usage(["promoter  ", "extract promoter for gene or genome"])
-    sub_usage(["terminator", "extract terminator for gene or genome"])
-    sub_usage(["transcript", "extract transcript (refMrna) sequence fo gene or genome"])
-    sub_usage(["uORF      ", "extract upstream ORF (uORF) for gene or genome"])
-    sub_usage(["UTR       ", "extract untranslated region (UTR) for gene or genome"])
+    sub_usage(["create    ", "create GFF/GTF database"])
+    sub_usage(["stat      ", "database statistics"])
+    sub_usage(["cds       ", "extract CDS sequence"])
+    sub_usage(["dorf      ", "extract dORF sequence"])
+    sub_usage(["exon      ", "extract exon sequence"])
+    sub_usage(["gene      ", "extract gene sequence"])
+    sub_usage(["intron    ", "extract intron sequence"])
+    sub_usage(["igr       ", "extract intergenic region"])
+    sub_usage(["mrna      ", "extract mRNA sequence"])
+    sub_usage(["promoter  ", "extract promoter sequence"])
+    sub_usage(["terminator", "extract terminator sequence"])
+    sub_usage(["transcript", "extract transcript sequence"])
+    sub_usage(["uorf      ", "extract uORF sequence"])
+    sub_usage(["utr       ", "extract 5/3UTR sequence"])
     
     sys.exit(1)
 
@@ -36,7 +36,8 @@ def main():
     if len(sys.argv) == 1:
         main_usage()
     elif len(sys.argv) >= 2:
-        if sys.argv[1] in ['create','gene','mRNA','transcript','IGR','promoter','terminator','UTR','uORF','CDS','dORF','exon','intron']:
+        if sys.argv[1] in ['create','stat','gene','mrna','transcript','igr','promoter',
+                           'terminator','utr','uorf','cds','dorf','exon','intron']:
             # import 就执行feature_extract()
             # 安装后，系统存在featurExtract包
             from featurExtract import feature_extract

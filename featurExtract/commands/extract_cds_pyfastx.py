@@ -18,6 +18,13 @@ from collections import defaultdict, deque, Counter
 from featurExtract.database.database import create_db, genome_dict
 from featurExtract.utils.util import add_stop_codon, mRNA_type, parse_output, gff_feature_dict, gtf_feature_dict
 
+# 
+import pyfastx 
+
+#def genome_dict(genome_fasta_path):
+#    genome = pyfastx.Fasta(genome_fasta_path)
+#    return genome
+
 '''
 https://www.ncbi.nlm.nih.gov/genbank/genomes_gff/
 '''
@@ -149,15 +156,16 @@ def get_cds(args):
     starttime = time.time()
     genome = genome_dict(args.genome)
     endtime = time.time()
-    print(endtime - starttime)
+    print('genome need:',endtime - starttime)
     if not args.transcript:
         param_list = [(g, t, db[g][t], genome, args.style, args.output_format) for g in db for t in db[g] if t != 'gene' and db[g][t].get('CDS')]
+        # multiple
         # param_list = [(g, t, db[g][t], args.genome, args.style, args.output_format) for g in db for t in db[g] if t != 'gene' and db[g][t].get('CDS')]
-        cds_seq_list = deque()
-        for para in tqdm(param_list, ncols = 80, total=len(param_list), desc='CDS processing:'):
-            cds_seq_list.append(sub_cds2(para))
-        #with Pool(processes=args.process) as p:
-        #    cds_seq_list = list(tqdm(p.map(sub_cds2, param_list), total=len(param_list), ncols = 80, desc='CDS processing:'))
+        #cds_seq_list = deque()
+        #for para in tqdm(param_list, ncols = 80, total=len(param_list), desc='CDS processing:'):
+        #     cds_seq_list.append(sub_cds2(para))
+        with Pool(processes=args.process) as p:
+            cds_seq_list = list(tqdm(p.map(sub_cds2, param_list), total=len(param_list), ncols = 80, desc='CDS processing:'))
         
         cds_seq_list = [d for de in cds_seq_list if de != None for d in de]
         starttime = time.time()

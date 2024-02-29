@@ -110,11 +110,11 @@ class visual_transcript_genome(object):
         self.output = output               # output prefix of a figure
         self.transcript_id = transcript_id
         self.exon_location = exon_location # 2D list 
-        print('exon_location=',exon_location)
+        # print('exon_location=',exon_location)
         self.cds_location = cds_location   # 2D list 
-        print('cds_location=',cds_location)
+        # print('cds_location=',cds_location)
         self.xorf_location = xorf_location # 3D list  
-        print("xorf_location=", xorf_location)
+        # print("xorf_location=", xorf_location)
         self.feature_type = feature_type   # uorf types: type 1 2 3
         # figure global variable
         self.height = 1
@@ -207,7 +207,7 @@ class visual_transcript_genome(object):
         # 2D list 
         for xorf in self.xorf_location:
             # wotyout intron 
-            print('xorf:', xorf)
+            # print('xorf:', xorf)
             if len(xorf) == 1:
                 intron_list_all.append([])
             else:

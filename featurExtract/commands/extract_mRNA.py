@@ -25,7 +25,7 @@ def minus_strand():
     pass
 
 
-def get_mRNA(args):
+def get_mrna(args):
     '''
     parameters:
         args: parse from argparse
@@ -46,7 +46,7 @@ def get_mRNA(args):
         # loop all transcript 
         for t in tqdm(db.features_of_type(mRNA_str, order_by='start'), \
                       total = len(list(db.features_of_type(mRNA_str, order_by='start'))), \
-                      ncols = 80, desc = "mRNA Processing:"):
+                      ncols = 80, desc = "mRNA processing:"):
             utr5, cds , utr3 = '', '', ''
             for u in db.children(t, featuretype=utr5_t, order_by='start'):
                 utr5 += u.sequence(args.genome, use_strand=False)
