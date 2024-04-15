@@ -12,14 +12,6 @@ Subpackages
 Submodules
 ----------
 
-featurExtract.a module
-----------------------
-
-.. automodule:: featurExtract.a
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 featurExtract.command\_gb module
 --------------------------------
 
