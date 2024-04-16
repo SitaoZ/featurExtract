@@ -464,7 +464,7 @@ genBankExtract tRNA -h
 
 ```bash
 # step 1 create database
-time featurExtract create -s GTF -g Araport11_GTF_genes_transposons.Mar202021.gtf -o test/ -p ath
+time featurExtract create -s gtf -g Araport11_GTF_genes_transposons.Mar202021.gtf -o test/ -p ath
 
 # step 2 command
 # cds 
